@@ -1,0 +1,9 @@
+{
+    "go.lintOnSave": "off",
+    "[go]": {
+        "editor.formatOnSave": false,
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "never"
+        }
+    }
+}

@@ -1,6 +1,7 @@
 package oauth
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
@@ -112,4 +113,15 @@ func (m *ManagerStruct) SetToken(state *string, token *oauth2.Token) (error) {
 		}
 	}
 	return fmt.Errorf("couldn't find state")
+}
+
+// functions that make it easier to work with oauth
+func (m *ManagerStruct) Exchange(ctx context.Context, code string) (*oauth2.Token, error) {
+	token, err := m.config.Exchange(ctx, code)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
 }

@@ -102,3 +102,14 @@ func (m *ManagerStruct) GetSession(userID int) (*Session, error) {
 func (m *ManagerStruct) DeleteSession(userID int) {
 	delete(m.sessions, userID)
 }
+
+func (m *ManagerStruct) SetToken(state *string, token *oauth2.Token) (error) {
+	// O(n) instead of O(1)
+	for _, session := range m.sessions {
+		if session.State == *state {
+			session.Token = token
+			return nil
+		}
+	}
+	return fmt.Errorf("couldn't find state")
+}

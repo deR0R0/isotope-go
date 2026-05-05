@@ -16,8 +16,8 @@ var config = &oauth2.Config{
 	ClientSecret: os.Getenv("ION_SECRET_ID"),
 	Scopes: []string{"read", "write"},
 	Endpoint: oauth2.Endpoint{
+		AuthURL: os.Getenv("OAUTH_AUTH_URL"),
 		TokenURL: os.Getenv("OAUTH_TOKEN_URL"),
-		AuthURL: os.Getenv("OAUTH_CODE_URL"),
 	},
 }
 
@@ -29,7 +29,7 @@ type Session struct {
 
 type ManagerStruct struct {
 	config *oauth2.Config;
-	sessions map[int]*Session // <state>: <session_struct>
+	sessions map[string]*Session // <state>: <session_struct>
 }
 
 var manager* ManagerStruct // store a file-wide manager
@@ -37,7 +37,7 @@ var manager* ManagerStruct // store a file-wide manager
 func init() {
 	manager = &ManagerStruct{
 		config: config,
-		sessions: make(map[int]*Session),
+		sessions: make(map[string]*Session),
 	}
 }
 
@@ -61,7 +61,7 @@ func generateState() (string, error) {
     return hex.EncodeToString(bytes), nil
 }
 
-func (m *ManagerStruct) CreateNewSession(userID int) (*Session, error) {
+func (m *ManagerStruct) CreateNewSession(userID string) (*Session, error) {
 	state, err := generateState()
 
 	if err != nil {
@@ -90,7 +90,7 @@ func (m *ManagerStruct) CreateNewSession(userID int) (*Session, error) {
 	return session, nil
 }
 
-func (m *ManagerStruct) GetSession(userID int) (*Session, error) {
+func (m *ManagerStruct) GetSession(userID string) (*Session, error) {
 	session, ok := m.sessions[userID]
 
 	if !ok {
@@ -100,7 +100,7 @@ func (m *ManagerStruct) GetSession(userID int) (*Session, error) {
 	return session, nil
 }
 
-func (m *ManagerStruct) DeleteSession(userID int) {
+func (m *ManagerStruct) DeleteSession(userID string) {
 	delete(m.sessions, userID)
 }
 

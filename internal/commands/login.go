@@ -3,6 +3,7 @@ package commands
 import (
 	"log/slog"
 
+	"github.com/deR0R0/isotope-go/internal/oauth"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
 )
@@ -18,10 +19,14 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 	// first, defer the interaction. show the "<bot> is thinking..." message (this may be a long-running task)
 	event.DeferCreateMessage(true)
 
-	_, err := event.Client().Rest.CreateFollowupMessage(
+	session, err := oauth.Manager().CreateNewSession(event.User().ID.String())
+
+	slog.Info("redirect url", slog.String("url", session.RedirectURI))
+
+	_, err = event.Client().Rest.CreateFollowupMessage(
 		event.ApplicationID(),
 		event.Token(),
-		discord.NewMessageCreate().WithContent("Updated after deferred."),
+		discord.NewMessageCreate().WithContent(session.RedirectURI),
 	)
 
 	if err != nil {

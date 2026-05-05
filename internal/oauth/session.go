@@ -24,7 +24,7 @@ type ManagerStruct struct {
 	sessions map[string]*Session // <state>: <session_struct>
 }
 
-var manager* ManagerStruct // store a file-wide manager
+var manager *ManagerStruct // store a file-wide manager
 
 func init() {
 	manager = &ManagerStruct{

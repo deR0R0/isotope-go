@@ -11,24 +11,16 @@ import (
 	"golang.org/x/oauth2"
 )
 
-var config = &oauth2.Config{
-	ClientID: os.Getenv("ION_CLIENT_ID"),
-	ClientSecret: os.Getenv("ION_SECRET_ID"),
-	Scopes: []string{"read", "write"},
-	Endpoint: oauth2.Endpoint{
-		AuthURL: os.Getenv("OAUTH_AUTH_URL"),
-		TokenURL: os.Getenv("OAUTH_TOKEN_URL"),
-	},
-}
+var config *oauth2.Config = nil
 
 type Session struct {
-	State string;
-	RedirectURI string;
-	Token *oauth2.Token;
+	State string
+	RedirectURI string
+	Token *oauth2.Token
 }
 
 type ManagerStruct struct {
-	config *oauth2.Config;
+	config *oauth2.Config
 	sessions map[string]*Session // <state>: <session_struct>
 }
 
@@ -39,6 +31,16 @@ func init() {
 		config: config,
 		sessions: make(map[string]*Session),
 	}
+
+	config = &oauth2.Config{
+		ClientID: os.Getenv("ION_CLIENT_ID"),
+		ClientSecret: os.Getenv("ION_SECRET_ID"),
+		Scopes: []string{"read", "write"},
+		Endpoint: oauth2.Endpoint{
+			AuthURL: os.Getenv("OAUTH_AUTH_URL"),
+			TokenURL: os.Getenv("OAUTH_TOKEN_URL"),
+	},
+}
 }
 
 func Manager() *ManagerStruct {

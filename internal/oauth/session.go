@@ -27,6 +27,14 @@ type ManagerStruct struct {
 var manager *ManagerStruct // store a file-wide manager
 
 func Init() {
+	var redirect_uri string
+
+	if os.Getenv("APP_ENV") == "production" {
+		redirect_uri = os.Getenv("OAUTH_REDIR_URI")
+	} else {
+		redirect_uri = "http://localhost:" + os.Getenv("WEB_SERVER_PORT") + "/login"
+	}
+
 	config = &oauth2.Config{
 		ClientID: os.Getenv("ION_CLIENT_ID"),
 		ClientSecret: os.Getenv("ION_SECRET_ID"),
@@ -35,6 +43,7 @@ func Init() {
 			AuthURL: os.Getenv("OAUTH_AUTH_URL"),
 			TokenURL: os.Getenv("OAUTH_TOKEN_URL"),
 		},
+		RedirectURL: redirect_uri,
 	}
 
 	manager = &ManagerStruct{

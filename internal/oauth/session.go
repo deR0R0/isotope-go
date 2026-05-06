@@ -107,7 +107,7 @@ func (m *ManagerStruct) DeleteSession(userID string) {
 }
 
 func (m *ManagerStruct) SetToken(state *string, token *oauth2.Token) (error) {
-	// O(n) instead of O(1)
+	// O(n) instead of O(1) consider optimizing
 	for _, session := range m.sessions {
 		if session.State == *state {
 			session.Token = token
@@ -118,12 +118,17 @@ func (m *ManagerStruct) SetToken(state *string, token *oauth2.Token) (error) {
 }
 
 // functions that make it easier to work with oauth
-func (m *ManagerStruct) Exchange(ctx context.Context, code string) (*oauth2.Token, error) {
+func (m *ManagerStruct) Exchange(ctx context.Context, code string, state string) (error) {
 	token, err := m.config.Exchange(ctx, code)
 
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return token, nil
+	err = m.SetToken(&state, token)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

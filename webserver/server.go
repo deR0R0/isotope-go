@@ -28,16 +28,9 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	// exchange the code for a token
 	httpClient := &http.Client{Timeout: 2 * time.Second}
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
-	token, err := oauth.Manager().Exchange(ctx, code)
+	err := oauth.Manager().Exchange(ctx, code, state)
 	if err != nil {
-		fmt.Fprintf(w, "There was an error while exchanging for your token! Try again later. DM @robboach")
-	}
-
-	// link our token to the state
-	err = oauth.Manager().SetToken(&state, token)
-	if err != nil {
-		fmt.Fprintf(w, "There was an error while linking your discord account and oauth token! Try again later. DM @robboach")
-		return
+		fmt.Fprintf(w, "There was an error while logging you in! Try again later. DM @robboach")
 	}
 
 	fmt.Fprintf(w, "Successfully Connected. You may return to Discord. It may take a while for it to update.")

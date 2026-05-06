@@ -21,8 +21,6 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 
 	session, err := oauth.Manager().CreateNewSession(event.User().ID.String())
 
-	slog.Info("redirect url", slog.String("url", session.RedirectURI))
-
 	_, err = event.Client().Rest.CreateFollowupMessage(
 		event.ApplicationID(),
 		event.Token(),

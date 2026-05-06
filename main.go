@@ -8,6 +8,7 @@ import (
 	"syscall"
 
 	"github.com/deR0R0/isotope-go/internal/commands"
+	"github.com/deR0R0/isotope-go/internal/oauth"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/snowflake/v2"
@@ -16,6 +17,7 @@ import (
 
 func main() {
 	godotenv.Load()
+	oauth.Init()
 
 	var DISCORD_TOKEN = os.Getenv("DISCORD_TOKEN")
 

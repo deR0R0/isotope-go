@@ -27,11 +27,6 @@ type ManagerStruct struct {
 var manager *ManagerStruct // store a file-wide manager
 
 func init() {
-	manager = &ManagerStruct{
-		config: config,
-		sessions: make(map[string]*Session),
-	}
-
 	config = &oauth2.Config{
 		ClientID: os.Getenv("ION_CLIENT_ID"),
 		ClientSecret: os.Getenv("ION_SECRET_ID"),
@@ -39,8 +34,13 @@ func init() {
 		Endpoint: oauth2.Endpoint{
 			AuthURL: os.Getenv("OAUTH_AUTH_URL"),
 			TokenURL: os.Getenv("OAUTH_TOKEN_URL"),
-	},
-}
+		},
+	}
+	
+	manager = &ManagerStruct{
+		config: config,
+		sessions: make(map[string]*Session),
+	}
 }
 
 func Manager() *ManagerStruct {

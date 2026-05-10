@@ -30,7 +30,7 @@ var migrations = []string {
 			
 	*/
 	`CREATE TABLE IF NOT EXISTS users (
-		id INTEGER NOT NULL PRIMARY KEY,
+		id TEXT NOT NULL PRIMARY KEY,
 		state TEXT,
 		access_token TEXT,
 		token_type TEXT,
@@ -38,7 +38,7 @@ var migrations = []string {
 		expiry TEXT
 	);
 	CREATE TABLE IF NOT EXISTS guilds (
-		id INTEGER NOT NULL PRIMARY KEY,
+		id TEXT NOT NULL PRIMARY KEY,
 		verify_role_id INTEGER,
 		channel_id INTEGER
 	);

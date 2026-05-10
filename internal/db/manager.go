@@ -58,7 +58,7 @@ func migrateDB(database *sql.DB) (error) {
 		slog.Info("db version not same as migration version. migrating... ", slog.Int("db_version", db_version), slog.Int("migration_version", len(migrations)))
 		// not equal to migrations, we shall migrate our db up to that point
 		var err error;
-		for i := db_version; i < len(migrations); i++ { // start i at database version + 1
+		for i := db_version; i < len(migrations); i++ { // start i at database version
 			_, err = database.Exec(migrations[i])
 			if err != nil {
 				slog.Error("oops, issue while migrating the db. exiting...", slog.String("err", err.Error()))

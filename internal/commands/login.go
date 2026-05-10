@@ -12,7 +12,7 @@ import (
 func init() {
 	Register(discord.SlashCommandCreate{
 		Name: "login",
-		Description: "Generates a link to login to Ion.",
+		Description: "Log into your Ion account from this bot.",
 	})
 }
 
@@ -43,10 +43,11 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 		return
 	}
 
-	go func() {
-		time.Sleep(time.Second * 5)
-		if err := event.Client().Rest.DeleteFollowupMessage(event.ApplicationID(), event.Token(), msg.ID); err != nil {
-			slog.Warn("issue with deleting followup message. message is probably already deleted, so safe to ignore this message.")
-		}
-	}()
+	DeleteAfter(5 * time.Second, func() error {
+		return event.Client().Rest.DeleteFollowupMessage(
+			event.ApplicationID(),
+			event.Token(),
+			msg.ID,
+		)
+	})
 }

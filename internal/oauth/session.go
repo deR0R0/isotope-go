@@ -14,13 +14,13 @@ import (
 var config *oauth2.Config = nil
 
 type Session struct {
-	State string
+	State       string
 	RedirectURI string
-	Token *oauth2.Token
+	Token       *oauth2.Token
 }
 
 type ManagerStruct struct {
-	config *oauth2.Config
+	config   *oauth2.Config
 	sessions map[string]*Session // <state>: <session_struct>
 }
 
@@ -36,18 +36,18 @@ func Init() {
 	}
 
 	config = &oauth2.Config{
-		ClientID: os.Getenv("ION_CLIENT_ID"),
+		ClientID:     os.Getenv("ION_CLIENT_ID"),
 		ClientSecret: os.Getenv("ION_SECRET_ID"),
-		Scopes: []string{"read", "write"},
+		Scopes:       []string{"read", "write"},
 		Endpoint: oauth2.Endpoint{
-			AuthURL: os.Getenv("OAUTH_AUTH_URL"),
+			AuthURL:  os.Getenv("OAUTH_AUTH_URL"),
 			TokenURL: os.Getenv("OAUTH_TOKEN_URL"),
 		},
 		RedirectURL: redirect_uri,
 	}
 
 	manager = &ManagerStruct{
-		config: config,
+		config:   config,
 		sessions: make(map[string]*Session),
 	}
 }
@@ -65,11 +65,11 @@ func (m *ManagerStruct) getAuthURI(state *string) (string, error) {
 }
 
 func generateState() (string, error) {
-    bytes := make([]byte, 16)
-    if _, err := rand.Read(bytes); err != nil {
-        return "", err
-    }
-    return hex.EncodeToString(bytes), nil
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 func (m *ManagerStruct) CreateNewSession(userID string) (*Session, error) {
@@ -90,12 +90,12 @@ func (m *ManagerStruct) CreateNewSession(userID string) (*Session, error) {
 
 	// actually create our session. token is nil until we get our token
 	session := &Session{
-		State: state,
+		State:       state,
 		RedirectURI: authURI,
-		Token: nil,
+		Token:       nil,
 	}
 
-	// add the session to our manager 
+	// add the session to our manager
 	m.sessions[userID] = session
 
 	return session, nil
@@ -115,7 +115,7 @@ func (m *ManagerStruct) DeleteSession(userID string) {
 	delete(m.sessions, userID)
 }
 
-func (m *ManagerStruct) SetToken(state *string, token *oauth2.Token) (error) {
+func (m *ManagerStruct) SetToken(state *string, token *oauth2.Token) error {
 	// O(n) instead of O(1) consider optimizing
 	for _, session := range m.sessions {
 		if session.State == *state {
@@ -127,7 +127,7 @@ func (m *ManagerStruct) SetToken(state *string, token *oauth2.Token) (error) {
 }
 
 // functions that make it easier to work with oauth
-func (m *ManagerStruct) Exchange(ctx context.Context, code string, state string) (error) {
+func (m *ManagerStruct) Exchange(ctx context.Context, code string, state string) error {
 	token, err := m.config.Exchange(ctx, code)
 
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 
 func init() {
 	Register(discord.SlashCommandCreate{
-		Name: "login",
+		Name:        "login",
 		Description: "Log into your Ion account from this bot.",
 	})
 }
@@ -43,7 +43,7 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 		return
 	}
 
-	DeleteAfter(5 * time.Second, func() error {
+	DeleteAfter(5*time.Second, func() error {
 		return event.Client().Rest.DeleteFollowupMessage(
 			event.ApplicationID(),
 			event.Token(),

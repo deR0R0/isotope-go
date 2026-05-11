@@ -13,7 +13,7 @@ import (
 var DB_NAME = "store.db"
 var db *sql.DB = nil
 
-var migrations = []string {
+var migrations = []string{
 	// v1, schema:
 	/*
 		users:
@@ -27,7 +27,7 @@ var migrations = []string {
 			guildID - primary key, int
 			verifyRoleID - role to give when authentication successful
 			channelID - channel id where to put the button
-			
+
 	*/
 	`CREATE TABLE IF NOT EXISTS users (
 		id TEXT NOT NULL PRIMARY KEY,
@@ -45,7 +45,7 @@ var migrations = []string {
 	`,
 }
 
-func migrateDB(database *sql.DB) (error) {
+func migrateDB(database *sql.DB) error {
 	// query for the db version and compare with migration length
 	var db_version int
 	err := database.QueryRow("PRAGMA user_version").Scan(&db_version)
@@ -57,7 +57,7 @@ func migrateDB(database *sql.DB) (error) {
 	if db_version != len(migrations) {
 		slog.Info("db version not same as migration version. migrating... ", slog.Int("db_version", db_version), slog.Int("migration_version", len(migrations)))
 		// not equal to migrations, we shall migrate our db up to that point
-		var err error;
+		var err error
 		for i := db_version; i < len(migrations); i++ { // start i at database version
 			_, err = database.Exec(migrations[i])
 			if err != nil {
@@ -84,11 +84,11 @@ func provisionDB(database *sql.DB, first_boot bool) {
 	// if it's not our first boot, close connection and rename the previous db
 	if !first_boot {
 		database.Close()
-		os.Rename("./" + DB_NAME, "./old_" + DB_NAME)
+		os.Rename("./"+DB_NAME, "./old_"+DB_NAME)
 	}
 
 	var err error
-	database, err = sql.Open("sqlite3", "./" + DB_NAME)
+	database, err = sql.Open("sqlite3", "./"+DB_NAME)
 	if err != nil {
 		slog.Error("cannot open database file. fix permissions and rerun. exiting now.")
 		panic("database open err")
@@ -107,7 +107,7 @@ func Init() {
 	}
 
 	var err error
-	db, err = sql.Open("sqlite3", "./" + DB_NAME)
+	db, err = sql.Open("sqlite3", "./"+DB_NAME)
 	if err != nil {
 		slog.Error("couldn't open db file. oh no. fix permissions please", slog.String("err", err.Error()))
 	}

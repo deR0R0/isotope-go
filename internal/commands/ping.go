@@ -9,7 +9,7 @@ import (
 
 func init() {
 	Register(discord.SlashCommandCreate{
-		Name: "ping",
+		Name:        "ping",
 		Description: "Returns the gateway latency of this bot.",
 	})
 }

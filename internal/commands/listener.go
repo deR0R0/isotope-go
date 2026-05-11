@@ -8,7 +8,7 @@ import (
 
 func Listener(event *events.ApplicationCommandInteractionCreate) {
 	slog.Info("executed command", "user", event.User().Username, "command", event.SlashCommandInteractionData().CommandName())
-	switch(event.SlashCommandInteractionData().CommandName()) {
+	switch event.SlashCommandInteractionData().CommandName() {
 	case "ping":
 		handlePing(event)
 	case "login":

@@ -118,10 +118,6 @@ func Init() {
 	migrateDB(db)
 }
 
-func GetDB() (*sql.DB, error) {
-	if db == nil {
-		return nil, fmt.Errorf("db is nil, couldn't get")
-	}
-
-	return db, nil
+func GetDB() *sql.DB {
+	return db
 }

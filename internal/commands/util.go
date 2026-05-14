@@ -13,3 +13,10 @@ func DeleteAfter(delay time.Duration, deleteFunction func() error) {
 		}
 	}()
 }
+
+func ShowErrorMessage(source string, editFunction func() error) {
+	slog.Error(source + " had an error. giving the user response message")
+	if err := editFunction(); err != nil {
+		slog.Error("wow, another err while editing the function.")
+	}
+}

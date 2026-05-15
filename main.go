@@ -10,6 +10,7 @@ import (
 	"github.com/deR0R0/isotope-go/internal/commands"
 	"github.com/deR0R0/isotope-go/internal/db"
 	"github.com/deR0R0/isotope-go/internal/oauth"
+	"github.com/deR0R0/isotope-go/webserver"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/snowflake/v2"
@@ -20,6 +21,11 @@ func main() {
 	godotenv.Load()
 	db.Init()
 	oauth.Init()
+
+	// run the web server in a goroutine
+	go func() {
+		webserver.Run()
+	}()
 
 	var DISCORD_TOKEN = os.Getenv("DISCORD_TOKEN")
 
@@ -61,7 +67,7 @@ func main() {
 	}
 
 	if selfUser, ok := client.Caches.SelfUser(); ok {
-		slog.Info("Logged in", slog.Any("user", selfUser))
+		slog.Info("Logged in", slog.Any("user", selfUser.Username))
 	}
 
 	// dont exit. wait for quit via ctrl c

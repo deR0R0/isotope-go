@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
+	"github.com/deR0R0/isotope-go/internal/db"
 	"golang.org/x/oauth2"
 )
 
@@ -49,6 +51,69 @@ func Init() {
 	manager = &ManagerStruct{
 		config:   config,
 		sessions: make(map[string]*Session),
+	}
+
+	// from the database, get all the users and tokens n stuff and resume their session.
+	users, err := db.GetAllUsers(db.GetDB())
+	if err != nil {
+		slog.Error("couldn't get all users", slog.String("err", err.Error()))
+		panic("can't resume oauth sessions")
+	}
+
+	database := db.GetDB()
+
+	for _, user := range *users {
+		at, tt, rt, e, err := db.GetTokenData(database, user)
+
+		if err != nil {
+			slog.Warn("failed to get token data from user", slog.String("id", user), slog.String("err", err.Error()))
+			continue
+		}
+
+		if at == "" {
+			continue // skip, they have no access token set yet
+		}
+
+		// resume the user's session
+
+		// state
+		var state string
+		if state, err = generateState(); err != nil {
+			slog.Warn("couldn't generate a state", slog.String("err", err.Error()))
+			continue
+		}
+
+		// auth uri
+		var uri string
+		if uri, err = manager.getAuthURI(&state); err != nil {
+			slog.Warn("couldn't get auth uri", slog.String("err", err.Error()))
+			continue
+		}
+
+		// parse expiry
+		var expiry time.Time
+		if expiry, err = time.Parse(time.RFC3339, e); err != nil {
+			slog.Warn("couldn't get time", slog.String("expiry", e), slog.String("err", err.Error()))
+			continue
+		}
+
+		// create our token
+		token := &oauth2.Token{
+			AccessToken:  at,
+			TokenType:    tt,
+			RefreshToken: rt,
+			Expiry:       expiry,
+		}
+
+		s := &Session{
+			state,
+			uri,
+			token,
+		}
+
+		slog.Info("successfully resumed user", slog.String("id", user))
+
+		manager.sessions[user] = s
 	}
 }
 
@@ -111,6 +176,16 @@ func (m *ManagerStruct) GetSession(userID string) (*Session, error) {
 	return session, nil
 }
 
+func (m *ManagerStruct) GetSessionFromState(state string) (*Session, error) {
+	for _, session := range m.sessions {
+		if session.State == state {
+			return session, nil
+		}
+	}
+
+	return nil, fmt.Errorf("couldn't find session")
+}
+
 func (m *ManagerStruct) DeleteSession(userID string) {
 	delete(m.sessions, userID)
 }
@@ -120,6 +195,19 @@ func (m *ManagerStruct) SetToken(state *string, token *oauth2.Token) error {
 	for _, session := range m.sessions {
 		if session.State == *state {
 			session.Token = token
+
+			// run a goroutine to save it to the db!
+			go func() {
+				userid, err := db.GetUserFromState(db.GetDB(), *state)
+
+				if err != nil {
+					slog.Error("couldn't save token to db!", slog.String("err", err.Error()))
+					return
+				}
+
+				db.SaveTokenToDB(db.GetDB(), userid, token)
+			}()
+
 			return nil
 		}
 	}

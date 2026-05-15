@@ -1,11 +1,13 @@
-package main
+package webserver
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/deR0R0/isotope-go/internal/oauth"
@@ -13,7 +15,7 @@ import (
 )
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Hello, World! The time is %s\n", time.Now().Format(time.RFC1123))
+	fmt.Fprintf(w, "isotope, home of better code because i'm slightly smarter. wait. am i??")
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +32,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
 	err := oauth.Manager().Exchange(ctx, code, state)
 	if err != nil {
-		fmt.Fprintf(w, "There was an error while logging you in! Try again later. DM @robboach")
+		fmt.Fprintf(w, "There was an error while exchanging for your token! Try again later. DM an admin with this err: "+err.Error())
+		return
 	}
 
 	fmt.Fprintf(w, "Successfully Connected. You may return to Discord. It may take a while for it to update.")
@@ -41,17 +44,22 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintln(w, `{"status": "ok"}`)
 }
 
-func main() {
+func Run() {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/", homeHandler)
 	mux.HandleFunc("/login", loginHandler)
 	mux.HandleFunc("/health", healthHandler)
 
-	port := flag.Int("port", 8080, "Port to listen on")
-	flag.Parse()
+	portString := os.Getenv("WEB_SERVER_PORT")
+	port, err := strconv.Atoi(portString)
 
-	addr := fmt.Sprintf(":%d", *port)
+	if err != nil {
+		slog.Error("couldn't start up the server beacuse the web server port is probs not a number.")
+		return
+	}
+
+	addr := fmt.Sprintf(":%d", port)
 	log.Printf("Server listening on http://localhost%s\n", addr)
 
 	if err := http.ListenAndServe(addr, mux); err != nil {

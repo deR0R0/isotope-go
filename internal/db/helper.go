@@ -2,7 +2,14 @@ package db
 
 import (
 	"database/sql"
+	"time"
+
+	"golang.org/x/oauth2"
 )
+
+/*
+USER STUFF
+*/
 
 func UserExists(db *sql.DB, userid string) (bool, error) {
 	var e bool
@@ -35,6 +42,43 @@ func DeleteUser(db *sql.DB, userid string) error {
 	return nil
 }
 
+func GetUserFromState(db *sql.DB, state string) (string, error) {
+	var userid string
+	err := db.QueryRow("SELECT id FROM users WHERE state = ?", state).Scan(&userid)
+
+	if err != nil {
+		return "", err
+	}
+
+	return userid, nil
+}
+
+// Users are returned by IDs
+func GetAllUsers(db *sql.DB) (*[]string, error) {
+	rows, err := db.Query("SELECT id FROM users")
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var allIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+
+		allIDs = append(allIDs, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &allIDs, nil
+}
+
 /*
 OAUTH HELPERS
 */
@@ -55,6 +99,20 @@ func GetTokenData(db *sql.DB, userid string) (string, string, string, string, er
 	}
 
 	return at, tt, rt, e, nil
+}
+
+func SetTokenData(db *sql.DB, userid string, at string, tt string, rt string, e string) error {
+	_, err := db.Exec("UPDATE users SET access_token = ?, token_type = ?, refresh_token = ?, expiry = ? WHERE id = ?", at, tt, rt, e, userid)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func SaveTokenToDB(db *sql.DB, userid string, token *oauth2.Token) {
+	SetTokenData(db, userid, token.AccessToken, token.TokenType, token.RefreshToken, token.Expiry.Format(time.RFC3339))
 }
 
 func GetState(db *sql.DB, userid string) (string, error) {

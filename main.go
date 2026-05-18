@@ -13,6 +13,8 @@ import (
 	"github.com/deR0R0/isotope-go/webserver"
 	"github.com/disgoorg/disgo"
 	"github.com/disgoorg/disgo/bot"
+	"github.com/disgoorg/disgo/cache"
+	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/joho/godotenv"
 )
@@ -21,6 +23,8 @@ func main() {
 	godotenv.Load()
 	db.Init()
 	oauth.Init()
+
+	db.DeleteUser(db.GetDB(), "668626305188757536")
 
 	// run the web server in a goroutine
 	go func() {
@@ -32,9 +36,16 @@ func main() {
 	// create the client
 	slog.Info("creating the client")
 	client, err := disgo.New(DISCORD_TOKEN,
-		bot.WithDefaultGateway(),
+		bot.WithGatewayConfigOpts(
+			gateway.WithIntents(gateway.IntentGuilds, gateway.IntentGuildMembers, gateway.IntentDirectMessages, gateway.IntentGuildMessages, gateway.IntentMessageContent),
+		),
+		bot.WithCacheConfigOpts(
+			cache.WithCaches(cache.FlagGuilds),
+		),
 		bot.WithEventListenerFunc(commands.Listener),
 	)
+
+	commands.SetClient(client)
 
 	if err != nil {
 		slog.Error("error while making disgo instance: ", slog.Any("err", err))
@@ -53,7 +64,7 @@ func main() {
 			client.Rest.SetGuildCommands(client.ApplicationID, guildId, commands.Commands)
 		}
 	} else {
-		slog.Info("Syncing commands to GLOBAL in a DEVELOPMENT environment.")
+		slog.Info("Syncing commands to GLOBAL in a PRODUCTION environment.")
 		client.Rest.SetGlobalCommands(client.ApplicationID, commands.Commands)
 		commands.Commands = nil // garbage collect this as we don't need this anymore
 	}

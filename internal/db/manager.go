@@ -43,6 +43,15 @@ var migrations = []string{
 		channel_id INTEGER
 	);
 	`,
+
+	/*
+	Added:
+		users:
+			firstTimeVerifying
+	*/
+	`
+	ALTER TABLE users ADD firstTimeVerifying BOOLEAN;
+	`,
 }
 
 func migrateDB(database *sql.DB) error {

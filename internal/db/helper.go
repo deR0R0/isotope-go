@@ -2,6 +2,8 @@ package db
 
 import (
 	"database/sql"
+	"fmt"
+	"slices"
 	"time"
 
 	"golang.org/x/oauth2"
@@ -23,7 +25,7 @@ func UserExists(db *sql.DB, userid string) (bool, error) {
 }
 
 func CreateUser(db *sql.DB, userid string) error {
-	_, err := db.Exec("INSERT INTO users (id) VALUES (?)", userid)
+	_, err := db.Exec("INSERT INTO users (id, firstTimeVerifying) VALUES (?, ?)", userid, true)
 
 	if err != nil {
 		return err
@@ -134,4 +136,78 @@ func SetState(db *sql.DB, userid string, state string) error {
 	}
 
 	return nil
+}
+
+/*
+GUILD STUFF
+*/
+
+func GetAllGuilds(db *sql.DB) (*[]string, error) {
+	rows, err := db.Query("SELECT id FROM guild")
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	var allIDs []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+
+		allIDs = append(allIDs, id)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return &allIDs, nil
+}
+
+
+/*
+LOGIN/AUTHORZATION
+*/
+
+func GetGuildAuthData(db *sql.DB, guildid string) (string, string, error) {
+	rows, err := db.Query("SELECT verify_role_id, channel_id FROM guilds WHERE id = ?", guildid)
+
+	if err != nil {
+		return "", "", err
+	}
+
+	defer rows.Close()
+
+	var verify_role_id, auth_channel_id string
+
+	for rows.Next() {
+		rows.Scan(&verify_role_id, &auth_channel_id)
+	}
+
+	return verify_role_id, auth_channel_id, nil
+}
+
+/*
+OTHER
+*/
+
+func Get(db *sql.DB, userid string, key string) (any, error) {
+	// sanitize input because we can't use ? placeholders in the sqlite3 thing
+	allowedKeys := []string{"firstTimeVerifying"}
+
+	if !slices.Contains(allowedKeys, key) {
+		return nil, fmt.Errorf("unallowed key")
+	}
+
+	var value any
+	err := db.QueryRow("SELECT " + key + " FROM users WHERE id = ?", userid).Scan(&value)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return value, nil
 }

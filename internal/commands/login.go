@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"log/slog"
 	"time"
 
@@ -86,4 +87,64 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 	}
 
 	db.SetState(db.GetDB(), userID, session.State)
+}
+
+func HandleNewLogin(state string) (error) {
+	// ensure this is actually their first time verifying
+	userid, err := db.GetUserFromState(db.GetDB(), state)
+
+	if err != nil {
+		slog.Error("couldn't handle new login", slog.String("err", err.Error()))
+		return err
+	}
+
+	slog.Info("handling a new login from user", slog.String("user", userid))
+
+	first_time, err := db.Get(db.GetDB(), userid, "firstTimeVerifying")
+
+	ft, ok := first_time.(bool)
+	if !ok {
+		slog.Error("first_time return from the db is not bool type")
+		return fmt.Errorf("Unexpected type returned from the DB.")
+	}
+
+	if !ft {
+		slog.Info("not the user's first time verifying, skipping...")
+		return nil
+	}
+
+	serversVerified := 0
+
+	// first, process through the bot's cache for each guild
+	for guild := range client.Caches.Guilds() {
+		if err != nil {
+			slog.Warn("couldn't get member from guild. most likely not in the guild ", slog.String("err", err.Error()))
+			continue
+		}
+
+		role_id, _, err := db.GetGuildAuthData(db.GetDB(), guild.ID.String())
+
+		if err != nil {
+			slog.Error("err while getting guild auth data", slog.String("err", err.Error()))
+			continue
+		}
+
+		if role_id == "" {
+			slog.Warn("guild doesn't have a role set!", slog.String("guild", guild.ID.String()), slog.String("role", role_id))
+			continue
+		}
+
+		err = AddRole(userid, role_id, guild.ID.String())
+		if err != nil {
+			slog.Error("err while adding role", slog.String("err", err.Error()))
+			continue
+		}
+
+		serversVerified++
+	}
+
+
+	slog.Info("successfully verified user amount of guilds verified: ", slog.String("user", userid), slog.Int("guilds", serversVerified))
+
+	return nil
 }

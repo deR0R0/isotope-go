@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/deR0R0/isotope-go/internal/commands"
 	"github.com/deR0R0/isotope-go/internal/oauth"
 	"golang.org/x/oauth2"
 )
@@ -32,7 +33,14 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	ctx := context.WithValue(context.Background(), oauth2.HTTPClient, httpClient)
 	err := oauth.Manager().Exchange(ctx, code, state)
 	if err != nil {
-		fmt.Fprintf(w, "There was an error while exchanging for your token! Try again later. DM an admin with this err: "+err.Error())
+		fmt.Fprintf(w, "%s", "There was an error while exchanging for your token! Try again later. DM an admin with this err: "+err.Error())
+		return
+	}
+
+	// actually get the bot to add the roles to the user
+	err = commands.HandleNewLogin(state)
+	if err != nil {
+		fmt.Fprintf(w, "%s", "Oops, there was an issue while adding your discord roles. Here's the exact error: " + err.Error())
 		return
 	}
 

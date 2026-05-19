@@ -23,7 +23,7 @@ type Session struct {
 
 type ManagerStruct struct {
 	config   *oauth2.Config
-	sessions map[string]*Session // <state>: <session_struct>
+	sessions map[string]*Session // <userid>: <session_struct>
 }
 
 var manager *ManagerStruct // store a file-wide manager

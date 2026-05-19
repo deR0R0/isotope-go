@@ -146,5 +146,11 @@ func HandleNewLogin(state string) (error) {
 
 	slog.Info("successfully verified user amount of guilds verified: ", slog.String("user", userid), slog.Int("guilds", serversVerified))
 
-	return nil
+	err = db.Set(db.GetDB(), userid, "firstTimeVerifying", false)
+
+	if err != nil {
+		slog.Error("error setting first time verifying", slog.String("err", err.Error()))
+	}
+
+	return err
 }

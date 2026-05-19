@@ -106,11 +106,7 @@ func GetTokenData(db *sql.DB, userid string) (string, string, string, string, er
 func SetTokenData(db *sql.DB, userid string, at string, tt string, rt string, e string) error {
 	_, err := db.Exec("UPDATE users SET access_token = ?, token_type = ?, refresh_token = ?, expiry = ? WHERE id = ?", at, tt, rt, e, userid)
 
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func SaveTokenToDB(db *sql.DB, userid string, token *oauth2.Token) {
@@ -210,4 +206,16 @@ func Get(db *sql.DB, userid string, key string) (any, error) {
 	}
 
 	return value, nil
+}
+
+func Set(db *sql.DB, userid string, key string, value any) (error) {
+	allowedKey := []string{"firstTimeVerifying"}
+
+	if !slices.Contains(allowedKey, key) {
+		return fmt.Errorf("unallowed key")
+	}
+
+	_, err := db.Exec("UPDATE users SET " + key + " = ? WHERE id = ?", value, userid)
+
+	return err
 }

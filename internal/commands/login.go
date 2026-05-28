@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/deR0R0/isotope-go/internal/db"
@@ -17,6 +18,8 @@ func init() {
 		Description: "Log into your Ion account from this bot.",
 	})
 }
+
+var LOGIN_LINK_TIMEOUT int = 10
 
 // local error message to make it quick!
 func loginShowErrorMessage(event *events.ApplicationCommandInteractionCreate) {
@@ -63,10 +66,16 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 		return
 	}
 
+	timeToExpire := time.Now().Unix() + int64(LOGIN_LINK_TIMEOUT)
+
 	msg, err := event.Client().Rest.CreateFollowupMessage(
 		event.ApplicationID(),
 		event.Token(),
-		discord.NewMessageCreate().WithContent(session.RedirectURI),
+		discord.NewMessageCreate().WithContent("Hello! Here's your login link! Expires in <t:" + strconv.Itoa(int(timeToExpire)) +  ":R>").WithComponents(discord.LayoutComponent(
+			discord.NewActionRow(
+				discord.NewLinkButton("Login", session.RedirectURI),
+			),
+		)),
 	)
 
 	if err != nil {
@@ -74,7 +83,7 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 		return
 	}
 
-	DeleteAfter(5*time.Second, func() error {
+	DeleteAfter(time.Duration(LOGIN_LINK_TIMEOUT)*time.Second, func() error {
 		return event.Client().Rest.DeleteFollowupMessage(
 			event.ApplicationID(),
 			event.Token(),

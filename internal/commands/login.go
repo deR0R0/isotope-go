@@ -71,7 +71,7 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 	msg, err := event.Client().Rest.CreateFollowupMessage(
 		event.ApplicationID(),
 		event.Token(),
-		discord.NewMessageCreate().WithContent("Hello! Here's your login link! Expires in <t:" + strconv.Itoa(int(timeToExpire)) +  ":R>").WithComponents(discord.LayoutComponent(
+		discord.NewMessageCreate().WithContent("Hello! Here's your login link! Expires in <t:"+strconv.Itoa(int(timeToExpire))+":R>").WithComponents(discord.LayoutComponent(
 			discord.NewActionRow(
 				discord.NewLinkButton("Login", session.RedirectURI),
 			),
@@ -98,7 +98,7 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 	db.SetState(db.GetDB(), userID, session.State)
 }
 
-func HandleNewLogin(state string) (error) {
+func HandleNewLogin(state string) error {
 	// ensure this is actually their first time verifying
 	userid, err := db.GetUserFromState(db.GetDB(), state)
 
@@ -151,7 +151,6 @@ func HandleNewLogin(state string) (error) {
 
 		serversVerified++
 	}
-
 
 	slog.Info("successfully verified user amount of guilds verified: ", slog.String("user", userid), slog.Int("guilds", serversVerified))
 

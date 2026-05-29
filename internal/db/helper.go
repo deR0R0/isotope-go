@@ -163,7 +163,6 @@ func GetAllGuilds(db *sql.DB) (*[]string, error) {
 	return &allIDs, nil
 }
 
-
 /*
 LOGIN/AUTHORZATION
 */
@@ -199,7 +198,7 @@ func Get(db *sql.DB, userid string, key string) (any, error) {
 	}
 
 	var value any
-	err := db.QueryRow("SELECT " + key + " FROM users WHERE id = ?", userid).Scan(&value)
+	err := db.QueryRow("SELECT "+key+" FROM users WHERE id = ?", userid).Scan(&value)
 
 	if err != nil {
 		return nil, err
@@ -208,14 +207,14 @@ func Get(db *sql.DB, userid string, key string) (any, error) {
 	return value, nil
 }
 
-func Set(db *sql.DB, userid string, key string, value any) (error) {
+func Set(db *sql.DB, userid string, key string, value any) error {
 	allowedKey := []string{"firstTimeVerifying"}
 
 	if !slices.Contains(allowedKey, key) {
 		return fmt.Errorf("unallowed key")
 	}
 
-	_, err := db.Exec("UPDATE users SET " + key + " = ? WHERE id = ?", value, userid)
+	_, err := db.Exec("UPDATE users SET "+key+" = ? WHERE id = ?", value, userid)
 
 	return err
 }

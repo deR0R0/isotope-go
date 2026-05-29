@@ -24,8 +24,6 @@ func main() {
 	db.Init()
 	oauth.Init()
 
-	db.DeleteUser(db.GetDB(), "668626305188757536")
-
 	// run the web server in a goroutine
 	go func() {
 		webserver.Run()

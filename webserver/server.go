@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/deR0R0/isotope-go/internal/commands"
+	"github.com/deR0R0/isotope-go/internal/db"
 	"github.com/deR0R0/isotope-go/internal/oauth"
 	"golang.org/x/oauth2"
 )
@@ -40,11 +41,20 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	// actually get the bot to add the roles to the user
 	err = commands.HandleNewLogin(state)
 	if err != nil {
-		fmt.Fprintf(w, "%s", "Oops, there was an issue while adding your discord roles. Here's the exact error: " + err.Error())
+		fmt.Fprintf(w, "%s", "Oops, there was an issue while adding your discord roles. DM an admin with this err: "+err.Error())
 		return
 	}
 
-	fmt.Fprintf(w, "Successfully Connected. You may return to Discord. It may take a while for it to update.")
+	userid, _ := db.GetUserFromState(db.GetDB(), state)
+	profile, err := oauth.Manager().GetProfile(userid)
+	if err != nil {
+		slog.Error("error while getting profile", slog.String("err", err.Error()))
+		fmt.Fprintf(w, "%s", "Oops, looks like there was an issue while fetching your profile... DM an admin with this err: "+err.Error())
+		return
+	}
+	slog.Info("testing user's oauth session by sending a profile request...")
+
+	fmt.Fprintf(w, "%s", "<h1>Welcome, "+profile.Ion_Username+"</h1>\n<p>Hello "+profile.Full_Name+"! You may return to discord.</p><p>Details: "+profile.Ion_Username+" is linked to "+userid)
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {

@@ -45,9 +45,9 @@ var migrations = []string{
 	`,
 
 	/*
-	Added:
-		users:
-			firstTimeVerifying
+		Added:
+			users:
+				firstTimeVerifying
 	*/
 	`
 	ALTER TABLE users ADD firstTimeVerifying BOOLEAN;

@@ -17,7 +17,7 @@ func SetClient(c *bot.Client) {
 	client = c
 }
 
-func GetClient() (*bot.Client) {
+func GetClient() *bot.Client {
 	return client
 }
 
@@ -37,7 +37,7 @@ func ShowErrorMessage(source string, editFunction func() error) {
 	}
 }
 
-func AddRole(userid string, roleid string, guildid string) (error) {
+func AddRole(userid string, roleid string, guildid string) error {
 	// get the snowflakes
 	userSnowflake := snowflake.MustParse(userid)
 	roleSnowflake := snowflake.MustParse(roleid)

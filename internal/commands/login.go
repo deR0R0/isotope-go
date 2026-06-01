@@ -10,6 +10,8 @@ import (
 	"github.com/deR0R0/isotope-go/internal/oauth"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/disgo/rest"
+	"github.com/disgoorg/snowflake/v2"
 )
 
 func init() {
@@ -21,59 +23,88 @@ func init() {
 
 var LOGIN_LINK_TIMEOUT int = 10
 
-// local error message to make it quick!
-func loginShowErrorMessage(event *events.ApplicationCommandInteractionCreate) {
-	ShowErrorMessage("login", func() error {
-		_, err := event.Client().Rest.CreateFollowupMessage(
-			event.ApplicationID(),
-			event.Token(),
-			discord.NewMessageCreate().WithContent("Internal Server Error"),
-		)
-		return err
-	})
+type LoginResult struct {
+	LoggedIn bool
+	Session *oauth.Session
+	ExpireTime int64
 }
 
-func handleLogin(event *events.ApplicationCommandInteractionCreate) {
-	// first, defer the interaction. show the "<bot> is thinking..." message (this may be a long-running task)
-	event.DeferCreateMessage(true)
+type LoginParams struct {
+	UserID string
+	Rest rest.Rest
+	ApplicationID snowflake.ID
+	Token string
+}
 
-	userID := event.User().ID.String()
-
+func login(userID string) (*LoginResult, error) {
 	// check if user exists in the db and verify that they actually have data in access token
 	exists, err := db.UserExists(db.GetDB(), userID)
+
+	if err != nil {
+		return nil, err
+	}
+
 	if exists {
 		at, _, _, _, err := db.GetTokenData(db.GetDB(), userID)
 
 		if err != nil {
-			loginShowErrorMessage(event)
-			return
+			return nil, err
 		}
 
 		if at != "" {
-			event.Client().Rest.CreateFollowupMessage(
-				event.ApplicationID(),
-				event.Token(),
-				discord.NewMessageCreate().WithContent("You're already logged in!"),
-			)
-			return
+			return &LoginResult{LoggedIn: true}, nil
 		}
 	}
 
-	session, err := oauth.Manager().CreateNewSession(event.User().ID.String())
+	// grab oauth session
+	session, err := oauth.Manager().CreateNewSession(userID)
 
 	if err != nil {
-		loginShowErrorMessage(event)
-		return
+		return nil, err
 	}
 
 	timeToExpire := time.Now().Unix() + int64(LOGIN_LINK_TIMEOUT)
 
-	msg, err := event.Client().Rest.CreateFollowupMessage(
-		event.ApplicationID(),
-		event.Token(),
-		discord.NewMessageCreate().WithContent("Hello! Here's your login link! Expires in <t:"+strconv.Itoa(int(timeToExpire))+":R>").WithComponents(discord.LayoutComponent(
+	if !exists {
+		db.CreateUser(db.GetDB(), userID)
+	}
+
+	db.SetState(db.GetDB(), userID, session.State)
+
+	return &LoginResult{LoggedIn: false, Session: session, ExpireTime: timeToExpire}, nil
+}
+
+func HandleLogin(param *LoginParams) {
+	result, err := login(param.UserID)
+
+	if err != nil {
+		ShowErrorMessage("login", func() error {
+			_, err := param.Rest.CreateFollowupMessage(
+				param.ApplicationID,
+				param.Token,
+				discord.NewMessageCreate().WithContent("Internal Server Error"),
+			)
+			return err
+		})
+		return
+	}
+
+	if result.LoggedIn {
+		param.Rest.CreateFollowupMessage(
+			param.ApplicationID,
+			param.Token,
+			discord.NewMessageCreate().WithContent("You're already logged in!"),
+		)
+		return
+	}
+
+	msg, err := param.Rest.CreateFollowupMessage(
+		param.ApplicationID,
+		param.Token,
+		discord.NewMessageCreate().WithContent("Hello! Here's your login link! Expires in <t:"+strconv.Itoa(int(result.ExpireTime))+":R>").WithComponents(discord.LayoutComponent(
 			discord.NewActionRow(
-				discord.NewLinkButton("Login", session.RedirectURI),
+				discord.NewLinkButton("Login", result.Session.RedirectURI),
+				discord.NewPrimaryButton("Test Button", "isotope_authorize"),
 			),
 		)),
 	)
@@ -84,18 +115,17 @@ func handleLogin(event *events.ApplicationCommandInteractionCreate) {
 	}
 
 	DeleteAfter(time.Duration(LOGIN_LINK_TIMEOUT)*time.Second, func() error {
-		return event.Client().Rest.DeleteFollowupMessage(
-			event.ApplicationID(),
-			event.Token(),
+		return param.Rest.DeleteFollowupMessage(
+			param.ApplicationID,
+			param.Token,
 			msg.ID,
 		)
 	})
+}
 
-	if !exists {
-		db.CreateUser(db.GetDB(), userID)
-	}
-
-	db.SetState(db.GetDB(), userID, session.State)
+func loginCommandHandler(event *events.ApplicationCommandInteractionCreate) {
+	event.DeferCreateMessage(true)
+	HandleLogin(&LoginParams{UserID: event.User().ID.String(), Rest: event.Client().Rest, ApplicationID: event.ApplicationID(), Token: event.Token()})
 }
 
 func HandleNewLogin(state string) error {

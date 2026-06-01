@@ -9,6 +9,7 @@ import (
 
 	"github.com/deR0R0/isotope-go/internal/commands"
 	"github.com/deR0R0/isotope-go/internal/db"
+	"github.com/deR0R0/isotope-go/internal/events"
 	"github.com/deR0R0/isotope-go/internal/oauth"
 	"github.com/deR0R0/isotope-go/webserver"
 	"github.com/disgoorg/disgo"
@@ -23,6 +24,8 @@ func main() {
 	godotenv.Load()
 	db.Init()
 	oauth.Init()
+
+	db.DeleteUser(db.GetDB(), "668626305188757536")
 
 	// run the web server in a goroutine
 	go func() {
@@ -41,6 +44,7 @@ func main() {
 			cache.WithCaches(cache.FlagGuilds),
 		),
 		bot.WithEventListenerFunc(commands.Listener),
+		bot.WithEventListenerFunc(events.ButtonListener),
 	)
 
 	commands.SetClient(client)

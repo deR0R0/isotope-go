@@ -12,6 +12,6 @@ func Listener(event *events.ApplicationCommandInteractionCreate) {
 	case "ping":
 		handlePing(event)
 	case "login":
-		handleLogin(event)
+		loginCommandHandler(event)
 	}
 }

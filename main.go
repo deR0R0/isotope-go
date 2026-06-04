@@ -43,16 +43,16 @@ func main() {
 		bot.WithCacheConfigOpts(
 			cache.WithCaches(cache.FlagGuilds),
 		),
-		bot.WithEventListenerFunc(commands.Listener),
 		bot.WithEventListenerFunc(events.ButtonListener),
 	)
-
-	commands.SetClient(client)
 
 	if err != nil {
 		slog.Error("error while making disgo instance: ", slog.Any("err", err))
 		return
 	}
+
+	commands.SetClient(client)
+	commands.InitRouter()
 
 	defer client.Close(context.TODO())
 
@@ -63,24 +63,23 @@ func main() {
 		if guildId == 0 {
 			slog.Error("missing environmental var \"GUILD_TEST_ID\" in a development environment.")
 		} else {
-			client.Rest.SetGuildCommands(client.ApplicationID, guildId, commands.Commands)
+			commands.SyncDev(&guildId)
 		}
 	} else {
 		slog.Info("Syncing commands to GLOBAL in a PRODUCTION environment.")
-		client.Rest.SetGlobalCommands(client.ApplicationID, commands.Commands)
-		commands.Commands = nil // garbage collect this as we don't need this anymore
+		commands.Sync()
 	}
 
 	// actually connect to gateway
 	slog.Info("connecting to gateway...")
 	err = client.OpenGateway(context.TODO())
 	if err != nil {
-		slog.Error("Could not connect to gateway.", slog.Any("err", err))
-		panic("Could not connect to gateway.")
+		slog.Error("could not connect to gateway.", slog.Any("err", err))
+		panic("could not connect to gateway.")
 	}
 
 	if selfUser, ok := client.Caches.SelfUser(); ok {
-		slog.Info("Logged in", slog.Any("user", selfUser.Username))
+		slog.Info("logged in", slog.Any("user", selfUser.Username))
 	}
 
 	// dont exit. wait for quit via ctrl c

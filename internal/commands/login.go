@@ -9,16 +9,20 @@ import (
 	"github.com/deR0R0/isotope-go/internal/db"
 	"github.com/deR0R0/isotope-go/internal/oauth"
 	"github.com/disgoorg/disgo/discord"
-	"github.com/disgoorg/disgo/events"
+	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/disgo/rest"
 	"github.com/disgoorg/snowflake/v2"
 )
 
 func init() {
-	Register(discord.SlashCommandCreate{
-		Name:        "login",
-		Description: "Log into your Ion account from this bot.",
-	})
+	RegisterCommand(
+		discord.SlashCommandCreate{
+			Name:        "login",
+			Description: "Log into your Ion account from this bot.",
+		},
+		"/login",
+		loginCommandHandler,
+	)
 }
 
 var LOGIN_LINK_TIMEOUT int = 10
@@ -74,7 +78,7 @@ func login(userID string) (*LoginResult, error) {
 	return &LoginResult{LoggedIn: false, Session: session, ExpireTime: timeToExpire}, nil
 }
 
-func HandleLogin(param *LoginParams) {
+func HandleLogin(param *LoginParams) (error) {
 	result, err := login(param.UserID)
 
 	if err != nil {
@@ -86,7 +90,6 @@ func HandleLogin(param *LoginParams) {
 			)
 			return err
 		})
-		return
 	}
 
 	if result.LoggedIn {
@@ -95,7 +98,7 @@ func HandleLogin(param *LoginParams) {
 			param.Token,
 			discord.NewMessageCreate().WithContent("You're already logged in!"),
 		)
-		return
+		return err
 	}
 
 	msg, err := param.Rest.CreateFollowupMessage(
@@ -111,7 +114,7 @@ func HandleLogin(param *LoginParams) {
 
 	if err != nil {
 		slog.Info("error while sending response: ", slog.Any("err", err))
-		return
+		return err
 	}
 
 	DeleteAfter(time.Duration(LOGIN_LINK_TIMEOUT)*time.Second, func() error {
@@ -121,11 +124,12 @@ func HandleLogin(param *LoginParams) {
 			msg.ID,
 		)
 	})
+	return nil
 }
 
-func loginCommandHandler(event *events.ApplicationCommandInteractionCreate) {
+func loginCommandHandler(data discord.SlashCommandInteractionData, event *handler.CommandEvent) (error) {
 	event.DeferCreateMessage(true)
-	HandleLogin(&LoginParams{UserID: event.User().ID.String(), Rest: event.Client().Rest, ApplicationID: event.ApplicationID(), Token: event.Token()})
+	return HandleLogin(&LoginParams{UserID: event.User().ID.String(), Rest: event.Client().Rest, ApplicationID: event.ApplicationID(), Token: event.Token()})
 }
 
 func HandleNewLogin(state string) error {

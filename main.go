@@ -25,6 +25,7 @@ func main() {
 	oauth.Init()
 
 	db.DeleteUser(db.GetDB(), "668626305188757536")
+	db.DeleteGuild(db.GetDB(), "1277325141587525682")
 
 	// run the web server in a goroutine
 	go func() {

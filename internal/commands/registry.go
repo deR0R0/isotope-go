@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"fmt"
 	"log/slog"
 	"maps"
 	"slices"
@@ -26,9 +27,30 @@ func InitRouter() {
 	tempCmdsStorage = nil // force garbage collect
 }
 
-func RegisterCommand(cmdDetails discord.ApplicationCommandCreate, route string, cmdFunction func(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error) (error) {
+func RegisterCommand(cmdDetails discord.ApplicationCommandCreate, opts ...any) (error) {
+	// route string, cmdFunction func(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error
+	// ^ original parameters
+
+	if len(opts) == 0 || len(opts) % 2 != 0 {
+		slog.Error("couldn't register command because it's in an improper format!", slog.String("name", cmdDetails.CommandName()))
+		return fmt.Errorf("couldn't register command because it's in an improper format")
+	}
+
+	// each "optional parameter": route (string) -> cmdFunction (func()) -> repeat
+	var route string
+	for _, opt := range opts {
+		switch v := opt.(type) {
+		case string:
+			route = v
+		case (func(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error):
+			tempCmdsStorage[route] = v
+		default:
+			panic("unknown data type provided in command register")
+		}
+	}
+
 	cmds = append(cmds, cmdDetails)
-	tempCmdsStorage[route] = cmdFunction
+	
 	return nil
 }
 

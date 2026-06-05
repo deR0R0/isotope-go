@@ -13,6 +13,7 @@ import (
 
 var r handler.Router
 var cmds []discord.ApplicationCommandCreate
+var routes = []string{}
 var tempCmdsStorage = make(map[string](func(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error))
 
 func InitRouter() {
@@ -52,6 +53,35 @@ func RegisterCommand(cmdDetails discord.ApplicationCommandCreate, opts ...any) (
 	cmds = append(cmds, cmdDetails)
 	
 	return nil
+}
+
+func ensureNoDuplicateRoutes(route string) {
+	// don't register more than 1 route, otherwise handler will break
+	idx := slices.Index(routes, route)
+	if idx != -1 {
+		// assume the current register is the superior one
+		if route != "/button/isotope_authorize" { // hard code this permanent button for authorization/verification purposes
+			slog.Info("route \"" + route + "\" already exists, removing previous...")
+		}
+		routes = slices.Delete(routes, idx, idx + 1)
+	}
+
+	// register
+	routes = append(routes, route)
+}
+
+func RegisterButton(route string, handlerFunc (func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error)) {
+	ensureNoDuplicateRoutes(route)
+
+	// register the button
+	r.ButtonComponent(route, handlerFunc)
+}
+
+func RegisterSelect(route string, handlerFunc (func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error)) {
+	ensureNoDuplicateRoutes(route)
+
+	// register the button
+	r.SelectMenuComponent(route, handlerFunc)
 }
 
 func SyncDev(guild *snowflake.ID) {

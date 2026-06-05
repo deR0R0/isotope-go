@@ -9,7 +9,6 @@ import (
 
 	"github.com/deR0R0/isotope-go/internal/commands"
 	"github.com/deR0R0/isotope-go/internal/db"
-	"github.com/deR0R0/isotope-go/internal/events"
 	"github.com/deR0R0/isotope-go/internal/oauth"
 	"github.com/deR0R0/isotope-go/webserver"
 	"github.com/disgoorg/disgo"
@@ -43,7 +42,6 @@ func main() {
 		bot.WithCacheConfigOpts(
 			cache.WithCaches(cache.FlagGuilds),
 		),
-		bot.WithEventListenerFunc(events.ButtonListener),
 	)
 
 	if err != nil {
@@ -54,7 +52,7 @@ func main() {
 	commands.SetClient(client)
 	commands.InitRouter()
 
-	defer client.Close(context.TODO())
+	defer client.Close(context.Background())
 
 	// command loading
 	if os.Getenv("APP_ENV") == "development" { // if we're in a development environment, only sync our commands with a certain guild

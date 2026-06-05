@@ -10,7 +10,7 @@ import (
 func init() {
 	RegisterCommand(
 		discord.SlashCommandCreate{
-			Name: "ping",
+			Name:        "ping",
 			Description: "Sends the roundtrip ping from this bot to Discord servers.",
 		},
 		"/ping",
@@ -18,7 +18,7 @@ func init() {
 	)
 }
 
-func handlePing(data discord.SlashCommandInteractionData, event *handler.CommandEvent) (error) {
+func handlePing(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error {
 	err := event.CreateMessage(discord.NewMessageCreate().WithContent("Pong :ping_pong:!\nLatency: " + event.Client().Gateway.Latency().String()))
 	if err != nil {
 		slog.Error("couldn't send response", slog.Any("err", err))

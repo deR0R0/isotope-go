@@ -8,11 +8,11 @@ import (
 func init() {
 	RegisterCommand(
 		discord.SlashCommandCreate{
-			Name: "guild",
+			Name:        "guild",
 			Description: "Guild command group",
 			Options: []discord.ApplicationCommandOption{
 				discord.ApplicationCommandOptionSubCommand{
-					Name: "settings",
+					Name:        "settings",
 					Description: "Show the guild settings",
 				},
 			},
@@ -21,17 +21,17 @@ func init() {
 	)
 }
 
-func guildSettings(data discord.SlashCommandInteractionData, event *handler.CommandEvent) (error) {
+func guildSettings(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error {
 	selectMenu := CreateNewSelect("guild_settings", "Select A Setting...", guildSettingsSelectMenu, "option 1", "option 2")
 
 	event.CreateMessage(
 		discord.NewMessageCreate().
-		WithContent("guild settings command").
-		WithComponents(
-			discord.NewActionRow(
-				selectMenu,
+			WithContent("guild settings command").
+			WithComponents(
+				discord.NewActionRow(
+					selectMenu,
+				),
 			),
-		),
 	)
 	return nil
 }

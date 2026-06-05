@@ -80,22 +80,22 @@ func AddRole(userid string, roleid string, guildid string) error {
 
 /* Router Component Helpers */
 
-func CreateNewButton(id string, label string, style discord.ButtonStyle, handlerFunc (func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error)) *discord.ButtonComponent {
+func CreateNewButton(id string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) *discord.ButtonComponent {
 	route := "/button/" + id
 
 	// don't use the NewPrimaryButton bs, just directly create the struct
 	button := discord.ButtonComponent{
-		Style: style,
-		Label: label,
+		Style:    style,
+		Label:    label,
 		CustomID: route,
 	}
 
-	slog.Info("registering button under route " + route, slog.String("id", id), slog.String("label", label))
+	slog.Info("registering button under route "+route, slog.String("id", id), slog.String("label", label))
 	RegisterButton(route, handlerFunc)
 	return &button
 }
 
-func CreateNewSelect(id string, placeholder string, handlerFunc (func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error), opts ...string) *discord.StringSelectMenuComponent {
+func CreateNewSelect(id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error, opts ...string) *discord.StringSelectMenuComponent {
 	route := "/select/" + id
 
 	// parse ze options
@@ -108,11 +108,11 @@ func CreateNewSelect(id string, placeholder string, handlerFunc (func(data disco
 	menu := discord.NewStringSelectMenu(
 		route,
 		placeholder,
-		options...
+		options...,
 	)
-	
-	slog.Info("registering string select menu under route " + route, slog.String("id", id))
+
+	slog.Info("registering string select menu under route "+route, slog.String("id", id))
 	RegisterSelect(route, handlerFunc)
-	
+
 	return &menu
 }

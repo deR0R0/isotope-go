@@ -18,7 +18,7 @@ var tempCmdsStorage = make(map[string](func(data discord.SlashCommandInteraction
 
 func InitRouter() {
 	r = handler.New()
-	
+
 	for _, route := range slices.Collect(maps.Keys(tempCmdsStorage)) {
 		slog.Info("registering route " + route)
 		r.SlashCommand(route, tempCmdsStorage[route])
@@ -28,11 +28,11 @@ func InitRouter() {
 	tempCmdsStorage = nil // force garbage collect
 }
 
-func RegisterCommand(cmdDetails discord.ApplicationCommandCreate, opts ...any) (error) {
+func RegisterCommand(cmdDetails discord.ApplicationCommandCreate, opts ...any) error {
 	// route string, cmdFunction func(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error
 	// ^ original parameters
 
-	if len(opts) == 0 || len(opts) % 2 != 0 {
+	if len(opts) == 0 || len(opts)%2 != 0 {
 		slog.Error("couldn't register command because it's in an improper format!", slog.String("name", cmdDetails.CommandName()))
 		return fmt.Errorf("couldn't register command because it's in an improper format")
 	}
@@ -51,7 +51,7 @@ func RegisterCommand(cmdDetails discord.ApplicationCommandCreate, opts ...any) (
 	}
 
 	cmds = append(cmds, cmdDetails)
-	
+
 	return nil
 }
 
@@ -63,21 +63,21 @@ func ensureNoDuplicateRoutes(route string) {
 		if route != "/button/isotope_authorize" { // hard code this permanent button for authorization/verification purposes
 			slog.Info("route \"" + route + "\" already exists, removing previous...")
 		}
-		routes = slices.Delete(routes, idx, idx + 1)
+		routes = slices.Delete(routes, idx, idx+1)
 	}
 
 	// register
 	routes = append(routes, route)
 }
 
-func RegisterButton(route string, handlerFunc (func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error)) {
+func RegisterButton(route string, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) {
 	ensureNoDuplicateRoutes(route)
 
 	// register the button
 	r.ButtonComponent(route, handlerFunc)
 }
 
-func RegisterSelect(route string, handlerFunc (func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error)) {
+func RegisterSelect(route string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error) {
 	ensureNoDuplicateRoutes(route)
 
 	// register the button

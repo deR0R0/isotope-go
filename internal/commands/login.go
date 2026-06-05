@@ -28,16 +28,16 @@ func init() {
 var LOGIN_LINK_TIMEOUT int = 10
 
 type LoginResult struct {
-	LoggedIn bool
-	Session *oauth.Session
+	LoggedIn   bool
+	Session    *oauth.Session
 	ExpireTime int64
 }
 
 type LoginParams struct {
-	UserID string
-	Rest rest.Rest
+	UserID        string
+	Rest          rest.Rest
 	ApplicationID snowflake.ID
-	Token string
+	Token         string
 }
 
 func login(userID string) (*LoginResult, error) {
@@ -78,7 +78,7 @@ func login(userID string) (*LoginResult, error) {
 	return &LoginResult{LoggedIn: false, Session: session, ExpireTime: timeToExpire}, nil
 }
 
-func HandleLogin(param *LoginParams) (error) {
+func HandleLogin(param *LoginParams) error {
 	result, err := login(param.UserID)
 
 	if err != nil {
@@ -127,12 +127,12 @@ func HandleLogin(param *LoginParams) (error) {
 	return nil
 }
 
-func loginCommandHandler(data discord.SlashCommandInteractionData, event *handler.CommandEvent) (error) {
+func loginCommandHandler(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error {
 	event.DeferCreateMessage(true)
 	return HandleLogin(&LoginParams{UserID: event.User().ID.String(), Rest: event.Client().Rest, ApplicationID: event.ApplicationID(), Token: event.Token()})
 }
 
-func loginButtonHandler(data discord.ButtonInteractionData, event *handler.ComponentEvent) (error) {
+func loginButtonHandler(data discord.ButtonInteractionData, event *handler.ComponentEvent) error {
 	event.DeferCreateMessage(true)
 	return HandleLogin(&LoginParams{UserID: event.User().ID.String(), Rest: event.Client().Rest, ApplicationID: event.ApplicationID(), Token: event.Token()})
 }

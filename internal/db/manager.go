@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"strconv"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -39,18 +40,26 @@ var migrations = []string{
 	);
 	CREATE TABLE IF NOT EXISTS guilds (
 		id TEXT NOT NULL PRIMARY KEY,
-		verify_role_id INTEGER,
-		channel_id INTEGER
+		verify_role_id TEXT,
+		channel_id TEXT
 	);
 	`,
 
 	/*
 		Added:
 			users:
-				firstTimeVerifying
+				firstTimeVerifying - to determine whether... nevermind.
 	*/
 	`
 	ALTER TABLE users ADD firstTimeVerifying BOOLEAN;
+	`,
+	/*
+		Added:
+			guilds:
+				verify_enabled - enable/disable the authorize stuff
+	*/
+	`
+	ALTER TABLE guilds ADD verify_enabled BOOLEAN;
 	`,
 }
 
@@ -68,6 +77,7 @@ func migrateDB(database *sql.DB) error {
 		// not equal to migrations, we shall migrate our db up to that point
 		var err error
 		for i := db_version; i < len(migrations); i++ { // start i at database version
+			slog.Info("migrating to version" + strconv.Itoa(i))
 			_, err = database.Exec(migrations[i])
 			if err != nil {
 				slog.Error("oops, issue while migrating the db. exiting...", slog.String("err", err.Error()))

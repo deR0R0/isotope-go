@@ -303,7 +303,7 @@ func GetStringFromGuilds(db *sql.DB, guildid string, key string) (string, error)
 	}
 
 	if value == nil {
-		return "", fmt.Errorf("nil response")
+		return "", nil
 	}
 
 	v, ok := value.(string)
@@ -318,11 +318,11 @@ func GetStringFromGuilds(db *sql.DB, guildid string, key string) (string, error)
 func GetBoolFromGuilds(db *sql.DB, guildid string, key string) (bool, error) {
 	value, err := GetFromGuilds(db, guildid, key)
 
-	if err == nil {
+	if err != nil {
 		return false, err
 	}
 
-	if value != nil {
+	if value == nil {
 		return false, fmt.Errorf("nil response")
 	}
 
@@ -333,4 +333,16 @@ func GetBoolFromGuilds(db *sql.DB, guildid string, key string) (bool, error) {
 	}
 
 	return v, nil
+}
+
+func SetToGuild(db *sql.DB, guildid string, key string, value any) error {
+	allowedKeys := []string{"verify_role_id", "channel_id", "verify_enabled"}
+
+	if !slices.Contains(allowedKeys, key) {
+		return fmt.Errorf("unallowed key")
+	}
+	
+	_, err := db.Exec("UPDATE guilds SET " + key + " = ? WHERE id = ?", value, guildid)
+
+	return err
 }

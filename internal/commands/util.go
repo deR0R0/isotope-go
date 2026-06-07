@@ -4,14 +4,20 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"strings"
+	"strconv"
 	"time"
 
+	"github.com/deR0R0/isotope-go/internal/db"
 	"github.com/disgoorg/disgo/bot"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/snowflake/v2"
 )
+
+type SelectOptions struct {
+	Label string
+	Emoji *discord.ComponentEmoji
+}
 
 /* CLIENT STUFF */
 var client *bot.Client
@@ -78,6 +84,32 @@ func AddRole(userid string, roleid string, guildid string) error {
 	return nil
 }
 
+/* I dunno what this is */
+func GetVerifyRoleFromGuild(guild *snowflake.ID) (*discord.Role, error) {
+	roleid, err := db.GetStringFromGuilds(db.GetDB(), guild.String(), "verify_role_id")
+	if err != nil {
+		return nil, err
+	}
+
+	// empty role - not set
+	if roleid == "" {
+		return nil, nil
+	}
+
+	sf, err := snowflake.Parse(roleid)
+	if err != nil {
+		return nil, err
+	}
+
+	// grab role from discord
+	role, err := client.Rest.GetRole(*guild, sf)
+	if err != nil {
+		return nil, err
+	}
+
+	return role, nil
+}
+
 /* Router Component Helpers */
 
 func CreateNewButton(id string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) *discord.ButtonComponent {
@@ -95,13 +127,18 @@ func CreateNewButton(id string, label string, style discord.ButtonStyle, handler
 	return &button
 }
 
-func CreateNewSelect(id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error, opts ...string) *discord.StringSelectMenuComponent {
+func CreateNewSelect(id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error, opts ...SelectOptions) *discord.StringSelectMenuComponent {
 	route := "/select/" + id
 
 	// parse ze options
+	// opts = param
+	// opt = singular option
+	// option = select menu option
 	options := make([]discord.StringSelectMenuOption, len(opts))
 	for i, opt := range opts {
-		options[i] = discord.NewStringSelectMenuOption(opt, strings.ToLower(opt))
+		option := discord.NewStringSelectMenuOption(opt.Label, "option_" + strconv.Itoa(i))
+		option.Emoji = opt.Emoji
+		options[i] = option
 	}
 
 	// build menu

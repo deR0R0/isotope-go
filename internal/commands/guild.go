@@ -29,6 +29,10 @@ type guildSettingsSelectResult struct {
 	Role *discord.Role
 }
 
+//func getGuildSettingsMessage(result *guildSettingsSelectResult) {
+	
+//}
+
 func getGuildSettingsSelect(guild snowflake.ID) (*guildSettingsSelectResult, error) {
 	result := &guildSettingsSelectResult{}
 	selectMenuOptions := []SelectOptions{}

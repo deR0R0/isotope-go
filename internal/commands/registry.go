@@ -16,6 +16,11 @@ var cmds []discord.ApplicationCommandCreate
 var routes = []string{}
 var tempCmdsStorage = make(map[string](func(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error))
 
+// use this for when we need to exclude a certain route.
+var hardCodedRoutes = []string{
+	"/button/isotope_authorize",
+}
+
 func InitRouter() {
 	r = handler.New()
 
@@ -60,7 +65,7 @@ func ensureNoDuplicateRoutes(route string) {
 	idx := slices.Index(routes, route)
 	if idx != -1 {
 		// assume the current register is the superior one
-		if route != "/button/isotope_authorize" { // hard code this permanent button for authorization/verification purposes
+		if !slices.Contains(hardCodedRoutes, route) { // hard code this permanent button for authorization/verification purposes
 			slog.Info("route \"" + route + "\" already exists, removing previous...")
 		}
 		routes = slices.Delete(routes, idx, idx+1)

@@ -48,6 +48,87 @@ func ShowErrorMessage(source string, editFunction func() error) {
 	}
 }
 
+/* A thing that helps with message building */
+type MessageBuilder struct {
+	sections []MessageBuilderSection
+}
+
+type MessageBuilderSectionType int
+
+const (
+	SectionTypeMessage MessageBuilderSectionType = iota
+	SectionTypeLargeHeader
+	SectionTypeMediumHeader
+	SectionTypeSmallHeader
+	SectionTypeIndent
+	SectionTypeCodeBlock
+	SectionTypeSeperator
+)
+
+type MessageBuilderSection struct {
+	message string
+	sectionType MessageBuilderSectionType
+}
+
+func GetNewMessageBuilder() (*MessageBuilder) {
+	return &MessageBuilder{}
+}
+
+func (mb *MessageBuilder) AddLargeHeader(msg string) {
+	mb.sections = append(mb.sections, MessageBuilderSection{message: msg, sectionType: SectionTypeLargeHeader})
+}
+
+func (mb *MessageBuilder) AddMediumHeader(msg string) {
+	mb.sections = append(mb.sections, MessageBuilderSection{message: msg, sectionType: SectionTypeMediumHeader})
+}
+
+func (mb *MessageBuilder) AddSmallHeader(msg string) {
+	mb.sections = append(mb.sections, MessageBuilderSection{message: msg, sectionType: SectionTypeSmallHeader})
+}
+
+func (mb *MessageBuilder) AddMessage(msg string) {
+	mb.sections = append(mb.sections, MessageBuilderSection{message: msg, sectionType: SectionTypeMessage})
+}
+
+func (mb *MessageBuilder) AddIndent(msg string) {
+	mb.sections = append(mb.sections, MessageBuilderSection{message: msg, sectionType: SectionTypeIndent})
+}
+
+func (mb *MessageBuilder) AddCodeBlock(msg string) {
+	mb.sections = append(mb.sections, MessageBuilderSection{message: msg, sectionType: SectionTypeCodeBlock})
+}
+
+func (mb *MessageBuilder) AddSeperators() {
+	mb.sections = append(mb.sections, MessageBuilderSection{sectionType: SectionTypeSeperator})
+}
+
+func (mb *MessageBuilder) BuildMessage() (string) {
+	// this method is to build the message from the message builder (no shit sherlock)
+	var output string = ""
+	for _, element := range mb.sections {
+		switch element.sectionType {
+		case SectionTypeMessage:
+			output += element.message + "\n"
+		case SectionTypeLargeHeader:
+			output += "# " + element.message + "\n"
+		case SectionTypeMediumHeader:
+			output += "## " + element.message + "\n"
+		case SectionTypeSmallHeader:
+			output += "### " + element.message + "\n"
+		case SectionTypeIndent:
+			output += "> " + element.message + "\n"
+		case SectionTypeCodeBlock:
+			output += "```" + element.message + "```\n"
+		case SectionTypeSeperator:
+			output += "\n"
+		default:
+			output += "You aren't supposed to see this.\n"
+		}
+	}
+
+	return output
+}
+
 /* Discord Role Helpers */
 
 func AddRole(userid string, roleid string, guildid string) error {

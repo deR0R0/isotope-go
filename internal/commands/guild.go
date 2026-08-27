@@ -29,9 +29,21 @@ type guildSettingsSelectResult struct {
 	Role *discord.Role
 }
 
-//func getGuildSettingsMessage(result *guildSettingsSelectResult) {
-	
-//}
+func getGuildSettingsMessage(result *guildSettingsSelectResult, guildName *string) (string) {
+	var message MessageBuilder
+
+	message.AddLargeHeader(*guildName + " Settings")
+	message.AddSeperators()
+
+	if result.VerifySystem {
+		message.AddMediumHeader(":white_check_mark: Verify System Enabled")
+		if result.Role != nil { message.AddIndent("Role: " + result.Role.Mention()) } else { message.AddIndent("Role: Not Set") }
+	} else {
+		message.AddMediumHeader(":x: Verify System Disabled")
+	}
+
+	return message.BuildMessage()
+}
 
 func getGuildSettingsSelect(guild snowflake.ID) (*guildSettingsSelectResult, error) {
 	result := &guildSettingsSelectResult{}
@@ -82,19 +94,7 @@ func guildSettings(data discord.SlashCommandInteractionData, event *handler.Comm
 		return err
 	}
 
-	message := "## " + guild.Name + " Settings\n"
-
-	// append other options if this is enabled
-	if result.VerifySystem {
-		message += "### **Verify System** Enabled :white_check_mark:\n"
-		message += "> **Verified Role**: Not Set\n"
-		if result.Role != nil {
-			message += "> **Verified Role**: " + result.Role.Mention() + "\n"
-		}
-		
-	} else {
-		message += "### **Verify System** Disabled :x:\n"
-	}
+	message := getGuildSettingsMessage(result, &guild.Name)
 
 	return event.CreateMessage(
 		discord.NewMessageCreate().
@@ -111,9 +111,12 @@ func guildSettings(data discord.SlashCommandInteractionData, event *handler.Comm
 }
 
 func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error {
-	event.DeferUpdateMessage() // discord requires an acknowledgement before we can edit the original message
+	guild, ok := event.Guild()
+	if !ok {
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!"))
+	}
 
-	result := ""
+	event.DeferUpdateMessage() // discord requires an acknowledgement before we can edit the original message
 
 	// determine what to do
 	menuData := data.(discord.StringSelectMenuInteractionData)
@@ -129,13 +132,11 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 			if err != nil {
 				return err
 			}
-			result = ":white_check_mark: Disabled Verify System"
 		} else {
 			err := db.SetToGuild(db.GetDB(), event.GuildID().String(), "verify_enabled", true)
 			if err != nil {
 				return err
 			}
-			result = ":white_check_mark: Enabled Verify System"
 		}
 	}
 
@@ -143,23 +144,24 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 	selectMenu, err = getGuildSettingsSelect(*event.GuildID())
 
 	if err != nil {
-		result = "Internal Error :("
 		event.UpdateInteractionResponse(
 			discord.NewMessageUpdate().
-			WithContent(result).
+			WithContent("Internal Error.").
 			WithComponents(),
 		)
-	} else {
-		event.UpdateInteractionResponse(
+	}
+
+	message := getGuildSettingsMessage(selectMenu, &guild.Name)
+
+	event.UpdateInteractionResponse(
 			discord.NewMessageUpdate().
-			WithContent(result).
+			WithContent(message).
 			WithComponents(
 				discord.NewActionRow(
 					selectMenu.Select,
 				),
 			),
 		)
-	}
 	
 	return err
 }

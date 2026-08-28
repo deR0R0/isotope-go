@@ -173,7 +173,7 @@ func DeleteGuild(db *sql.DB, guildid string) error {
 	return nil
 }
 
-func EnsureGuildExists(db *sql.DB, guildid string) (error) {
+func EnsureGuildExists(db *sql.DB, guildid string) error {
 	exists, err := GuildExists(db, guildid)
 
 	if err != nil {
@@ -341,8 +341,8 @@ func SetToGuild(db *sql.DB, guildid string, key string, value any) error {
 	if !slices.Contains(allowedKeys, key) {
 		return fmt.Errorf("unallowed key")
 	}
-	
-	_, err := db.Exec("UPDATE guilds SET " + key + " = ? WHERE id = ?", value, guildid)
+
+	_, err := db.Exec("UPDATE guilds SET "+key+" = ? WHERE id = ?", value, guildid)
 
 	return err
 }

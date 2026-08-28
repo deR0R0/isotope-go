@@ -24,28 +24,34 @@ func init() {
 }
 
 type guildSettingsSelectResult struct {
-	Select *discord.StringSelectMenuComponent
+	Select       *discord.StringSelectMenuComponent
 	VerifySystem bool
-	Role *discord.Role
+	Role         *discord.Role
 }
 
-func getGuildSettingsMessage(result *guildSettingsSelectResult, guildName *string) (string) {
+func getGuildSettingsMessage(result *guildSettingsSelectResult, guildName *string) string {
 	var message MessageBuilder
 
-	message.AddLargeHeader(*guildName + " Settings")
+	message.AddMediumHeader(*guildName + " Settings")
+	message.AddSeperators()
 	message.AddSeperators()
 
 	if result.VerifySystem {
-		message.AddMediumHeader(":white_check_mark: Verify System Enabled")
-		if result.Role != nil { message.AddIndent("Role: " + result.Role.Mention()) } else { message.AddIndent("Role: Not Set") }
+		message.AddMessage("**Verify System**: Enabled :white_check_mark:")
+		if result.Role != nil {
+			message.AddIndent("**Role**: " + result.Role.Mention())
+		} else {
+			message.AddIndent("**Role**: Not Set")
+		}
 	} else {
-		message.AddMediumHeader(":x: Verify System Disabled")
+		message.AddMessage("**Verify System**: Disabled :x:")
 	}
 
 	return message.BuildMessage()
 }
 
-func getGuildSettingsSelect(guild snowflake.ID) (*guildSettingsSelectResult, error) {
+// populates a select menu with options
+func getGuildSettingsSelect(guild snowflake.ID, author snowflake.ID) (*guildSettingsSelectResult, error) {
 	result := &guildSettingsSelectResult{}
 	selectMenuOptions := []SelectOptions{}
 
@@ -70,12 +76,12 @@ func getGuildSettingsSelect(guild snowflake.ID) (*guildSettingsSelectResult, err
 
 		result.Role = role
 
-		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Change Verify Role"})
+		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Change Verify Role", Emoji: &discord.ComponentEmoji{Name: "✍️"}})
 	} else {
 		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Enable Verify System", Emoji: &discord.ComponentEmoji{Name: "🟢"}})
 	}
 
-	selectMenu := CreateNewSelect("guild_settings", "Select A Setting...", guildSettingsSelectMenu, selectMenuOptions...)
+	selectMenu := CreateRestrictedSelect(60, author, "guild_settings", "Select A Setting...", guildSettingsSelectMenu, selectMenuOptions...)
 
 	result.Select = selectMenu
 
@@ -88,7 +94,7 @@ func guildSettings(data discord.SlashCommandInteractionData, event *handler.Comm
 		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!"))
 	}
 
-	result, err := getGuildSettingsSelect(*event.GuildID())
+	result, err := getGuildSettingsSelect(*event.GuildID(), event.User().ID)
 	if err != nil {
 		event.CreateMessage(discord.NewMessageCreate().WithContent("Internal Error :("))
 		return err
@@ -122,7 +128,7 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 	menuData := data.(discord.StringSelectMenuInteractionData)
 	values := menuData.Values
 
-	selectMenu, err := getGuildSettingsSelect(*event.GuildID()) // "previous" select TODO: REWORK BY SAVING THIS SELECT
+	selectMenu, err := getGuildSettingsSelect(*event.GuildID(), event.User().ID) // "previous" select TODO: REWORK BY SAVING THIS SELECT
 
 	// TEMP WAY TO HANDLE THIS. NEXT TIME REWORK HOW SELECT MENUS WORK INTERNALLY
 	switch values[0] {
@@ -141,27 +147,27 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 	}
 
 	// update the select
-	selectMenu, err = getGuildSettingsSelect(*event.GuildID())
+	selectMenu, err = getGuildSettingsSelect(*event.GuildID(), event.User().ID)
 
 	if err != nil {
 		event.UpdateInteractionResponse(
 			discord.NewMessageUpdate().
-			WithContent("Internal Error.").
-			WithComponents(),
+				WithContent("Internal Error.").
+				WithComponents(),
 		)
 	}
 
 	message := getGuildSettingsMessage(selectMenu, &guild.Name)
 
 	event.UpdateInteractionResponse(
-			discord.NewMessageUpdate().
+		discord.NewMessageUpdate().
 			WithContent(message).
 			WithComponents(
 				discord.NewActionRow(
 					selectMenu.Select,
 				),
 			),
-		)
-	
+	)
+
 	return err
 }

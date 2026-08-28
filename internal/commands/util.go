@@ -66,11 +66,11 @@ const (
 )
 
 type MessageBuilderSection struct {
-	message string
+	message     string
 	sectionType MessageBuilderSectionType
 }
 
-func GetNewMessageBuilder() (*MessageBuilder) {
+func GetNewMessageBuilder() *MessageBuilder {
 	return &MessageBuilder{}
 }
 
@@ -102,7 +102,7 @@ func (mb *MessageBuilder) AddSeperators() {
 	mb.sections = append(mb.sections, MessageBuilderSection{sectionType: SectionTypeSeperator})
 }
 
-func (mb *MessageBuilder) BuildMessage() (string) {
+func (mb *MessageBuilder) BuildMessage() string {
 	// this method is to build the message from the message builder (no shit sherlock)
 	var output string = ""
 	for _, element := range mb.sections {
@@ -120,7 +120,7 @@ func (mb *MessageBuilder) BuildMessage() (string) {
 		case SectionTypeCodeBlock:
 			output += "```" + element.message + "```\n"
 		case SectionTypeSeperator:
-			output += "\n"
+			output += "\n\u200B"
 		default:
 			output += "You aren't supposed to see this.\n"
 		}
@@ -208,6 +208,7 @@ func CreateNewButton(id string, label string, style discord.ButtonStyle, handler
 	return &button
 }
 
+// this is to create a permanent select
 func CreateNewSelect(id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error, opts ...SelectOptions) *discord.StringSelectMenuComponent {
 	route := "/select/" + id
 
@@ -217,7 +218,7 @@ func CreateNewSelect(id string, placeholder string, handlerFunc func(data discor
 	// option = select menu option
 	options := make([]discord.StringSelectMenuOption, len(opts))
 	for i, opt := range opts {
-		option := discord.NewStringSelectMenuOption(opt.Label, "option_" + strconv.Itoa(i))
+		option := discord.NewStringSelectMenuOption(opt.Label, "option_"+strconv.Itoa(i))
 		option.Emoji = opt.Emoji
 		options[i] = option
 	}
@@ -233,4 +234,13 @@ func CreateNewSelect(id string, placeholder string, handlerFunc func(data discor
 	RegisterSelect(route, handlerFunc)
 
 	return &menu
+}
+
+// creates a select but with the proper expiry and id.
+func CreateRestrictedSelect(expireSeconds int64, userID snowflake.ID, id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error, opts ...SelectOptions) *discord.StringSelectMenuComponent {
+	route := HandlerRoute{}
+	route.SetBase(id)
+	route.AddRestrictor("expire", strconv.FormatInt(time.Now().Unix(), 10))
+	route.AddRestrictor("author", strconv.FormatUint(uint64(userID), 10))
+	return CreateNewSelect(route.GetRoute(), placeholder, handlerFunc, opts...)
 }

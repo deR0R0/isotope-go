@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"strings"
 
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
@@ -19,6 +20,71 @@ var tempCmdsStorage = make(map[string](func(data discord.SlashCommandInteraction
 // use this for when we need to exclude a certain route.
 var hardCodedRoutes = []string{
 	"/button/isotope_authorize",
+}
+
+/* For handling routes */
+type HandlerRoute struct {
+	base        string
+	restrictors map[string]string
+}
+
+func (hr *HandlerRoute) SetBase(base string) {
+	hr.base = base
+}
+
+func (hr *HandlerRoute) AddRestrictor(key string, value string) {
+	// ensure restrictors is actually init'd
+	if hr.restrictors == nil {
+		hr.restrictors = make(map[string]string)
+	}
+
+	hr.restrictors[key] = value
+}
+
+func (hr *HandlerRoute) RemoveRestrictor(key string) {
+	delete(hr.restrictors, key)
+}
+
+func (hr *HandlerRoute) GetRoute() string {
+	finalRoute := hr.base
+
+	if len(hr.restrictors) != 0 {
+		finalRoute += "?"
+	}
+
+	idx := 0
+	for key, value := range hr.restrictors {
+		if idx > 0 {
+			finalRoute += "&"
+		}
+
+		finalRoute += key + "=" + value
+
+		idx++
+	}
+
+	return finalRoute
+}
+
+func DecodeRouteArgs(route string) map[string]string {
+	finalArgs := make(map[string]string)
+	questionMark := strings.Index(route, "?")
+
+	if questionMark == -1 {
+		return finalArgs
+	}
+
+	route = route[questionMark+1:] // slice string to only get the args
+
+	// now, split for every ampersand.
+	args := strings.Split(route, "&")
+
+	for _, argGroup := range args {
+		argPortions := strings.Split(argGroup, "=")
+		finalArgs[argPortions[0]] = argPortions[1]
+	}
+
+	return finalArgs
 }
 
 func InitRouter() {

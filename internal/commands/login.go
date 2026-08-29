@@ -86,7 +86,7 @@ func HandleLogin(param *LoginParams) error {
 			_, err := param.Rest.CreateFollowupMessage(
 				param.ApplicationID,
 				param.Token,
-				discord.NewMessageCreate().WithContent("Internal Server Error"),
+				discord.NewMessageCreate().WithContent("Internal Server Error").WithEphemeral(true),
 			)
 			return err
 		})
@@ -96,7 +96,7 @@ func HandleLogin(param *LoginParams) error {
 		param.Rest.CreateFollowupMessage(
 			param.ApplicationID,
 			param.Token,
-			discord.NewMessageCreate().WithContent("You're already logged in!"),
+			discord.NewMessageCreate().WithContent("You're already logged in!").WithEphemeral(true),
 		)
 		return err
 	}
@@ -109,7 +109,7 @@ func HandleLogin(param *LoginParams) error {
 				discord.NewLinkButton("Login", result.Session.RedirectURI),
 				CreateNewButton("isotope_authorize", "Login", discord.ButtonStylePrimary, loginButtonHandler),
 			),
-		)),
+		)).WithEphemeral(true),
 	)
 
 	if err != nil {

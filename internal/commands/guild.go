@@ -1,6 +1,9 @@
 package commands
 
 import (
+	"log/slog"
+	"strconv"
+
 	"github.com/deR0R0/isotope-go/internal/db"
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
@@ -65,7 +68,7 @@ func getGuildSettingsSelect(guild snowflake.ID, author snowflake.ID) (*guildSett
 
 	// verify system stuff
 	if verifyEnabled {
-		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Disable Verify System", Emoji: &discord.ComponentEmoji{Name: "🔴"}})
+		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Disable Verify System", Value: "Verify", Emoji: &discord.ComponentEmoji{Name: "🔴"}})
 		// role
 		role, err := GetVerifyRoleFromGuild(&guild)
 
@@ -76,9 +79,9 @@ func getGuildSettingsSelect(guild snowflake.ID, author snowflake.ID) (*guildSett
 
 		result.Role = role
 
-		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Change Verify Role", Emoji: &discord.ComponentEmoji{Name: "✍️"}})
+		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Change Verify Role", Value: "VerifyRole", Emoji: &discord.ComponentEmoji{Name: "✍️"}})
 	} else {
-		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Enable Verify System", Emoji: &discord.ComponentEmoji{Name: "🟢"}})
+		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Enable Verify System", Value: "Verify", Emoji: &discord.ComponentEmoji{Name: "🟢"}})
 	}
 
 	selectMenu := CreateRestrictedSelect(60, author, "guild_settings", "Select A Setting...", guildSettingsSelectMenu, selectMenuOptions...)
@@ -117,9 +120,19 @@ func guildSettings(data discord.SlashCommandInteractionData, event *handler.Comm
 }
 
 func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error {
+	// decode the id params
+	selectMenuID := data.CustomID()
+	selectMenuArgs := DecodeRouteArgs(selectMenuID)
+
+	// author check
+	if selectMenuArgs["author"] != event.User().ID.String() {
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("This is not your select menu!").WithEphemeral(true))
+	}
+
+	// guild check
 	guild, ok := event.Guild()
 	if !ok {
-		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!"))
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!").WithEphemeral(true))
 	}
 
 	event.DeferUpdateMessage() // discord requires an acknowledgement before we can edit the original message
@@ -130,9 +143,9 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 
 	selectMenu, err := getGuildSettingsSelect(*event.GuildID(), event.User().ID) // "previous" select TODO: REWORK BY SAVING THIS SELECT
 
-	// TEMP WAY TO HANDLE THIS. NEXT TIME REWORK HOW SELECT MENUS WORK INTERNALLY
+	// handle different values based on their custom values
 	switch values[0] {
-	case "option_0": // verify system
+	case "Verify": // verify system
 		if selectMenu.VerifySystem {
 			err := db.SetToGuild(db.GetDB(), event.GuildID().String(), "verify_enabled", false)
 			if err != nil {
@@ -144,6 +157,8 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 				return err
 			}
 		}
+	case "VerifyRole":
+		// do something
 	}
 
 	// update the select

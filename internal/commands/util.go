@@ -14,11 +14,6 @@ import (
 	"github.com/disgoorg/snowflake/v2"
 )
 
-type SelectOptions struct {
-	Label string
-	Emoji *discord.ComponentEmoji
-}
-
 /* CLIENT STUFF */
 var client *bot.Client
 
@@ -208,6 +203,14 @@ func CreateNewButton(id string, label string, style discord.ButtonStyle, handler
 	return &button
 }
 
+/* select */
+
+type SelectOptions struct {
+	Label string
+	Value string
+	Emoji *discord.ComponentEmoji
+}
+
 // this is to create a permanent select
 func CreateNewSelect(id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error, opts ...SelectOptions) *discord.StringSelectMenuComponent {
 	route := "/select/" + id
@@ -218,7 +221,11 @@ func CreateNewSelect(id string, placeholder string, handlerFunc func(data discor
 	// option = select menu option
 	options := make([]discord.StringSelectMenuOption, len(opts))
 	for i, opt := range opts {
-		option := discord.NewStringSelectMenuOption(opt.Label, "option_"+strconv.Itoa(i))
+		if opt.Label == "" || opt.Value == "" {
+			slog.Warn("skipping a select menu option because it's missing either a label or a value.", slog.String("id", id), slog.String("label", opt.Label), slog.String("value", opt.Value))
+			continue
+		}
+		option := discord.NewStringSelectMenuOption(opt.Label, opt.Value)
 		option.Emoji = opt.Emoji
 		options[i] = option
 	}

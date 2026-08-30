@@ -2,7 +2,6 @@ package commands
 
 import (
 	"log/slog"
-	"strconv"
 
 	"github.com/deR0R0/isotope-go/internal/db"
 	"github.com/disgoorg/disgo/discord"
@@ -32,12 +31,15 @@ type guildSettingsSelectResult struct {
 	Role         *discord.Role
 }
 
-func getGuildSettingsMessage(result *guildSettingsSelectResult, guildName *string) string {
+func getGuildSettingsMessage(result *guildSettingsSelectResult, guildName *string, opts ...string) string {
 	var message MessageBuilder
 
+	// "opts" will be what messages that will go before this.
+	for _, opt := range opts {
+		message.AddCodeBlock(opt)
+	}
+
 	message.AddMediumHeader(*guildName + " Settings")
-	message.AddSeperators()
-	message.AddSeperators()
 
 	if result.VerifySystem {
 		message.AddMessage("**Verify System**: Enabled :white_check_mark:")
@@ -79,9 +81,9 @@ func getGuildSettingsSelect(guild snowflake.ID, author snowflake.ID) (*guildSett
 
 		result.Role = role
 
-		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Change Verify Role", Value: "VerifyRole", Emoji: &discord.ComponentEmoji{Name: "✍️"}})
+		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Change Verify Role", Value: "VerifyRole", Description: "The role given to members who verified thru ion", Emoji: &discord.ComponentEmoji{Name: "✍️"}})
 	} else {
-		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Enable Verify System", Value: "Verify", Emoji: &discord.ComponentEmoji{Name: "🟢"}})
+		selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Enable Verify System", Value: "Verify", Description: "Allows you to have Ion verification", Emoji: &discord.ComponentEmoji{Name: "🟢"}})
 	}
 
 	selectMenu := CreateRestrictedSelect(60, author, "guild_settings", "Select A Setting...", guildSettingsSelectMenu, selectMenuOptions...)
@@ -158,7 +160,27 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 			}
 		}
 	case "VerifyRole":
-		// do something
+		// register a "role select" menu and send it
+		roleSelectMenu := CreateRoleSelect(60, event.User().ID, "guild_settings_role", "Select a role for verified members", handleGuildSettingsRoleSelect)
+
+		message := getGuildSettingsMessage(selectMenu, &guild.Name, "Choose the role that would be given to verified members in the dropdown...")
+
+		_, err = event.UpdateInteractionResponse(
+			discord.NewMessageUpdate().
+				WithContent(message).
+				WithComponents(
+					discord.NewActionRow(
+						roleSelectMenu,
+					),
+					discord.NewActionRow(
+						CreateNewRestrictedButton(60, event.User().ID, "cancel", "Cancel", discord.ButtonStyleDanger, handleGuildSettingsCancel),
+					),
+				).WithAllowedMentions(&discord.AllowedMentions{
+				Parse: []discord.AllowedMentionType{},
+			}),
+		)
+
+		return err
 	}
 
 	// update the select
@@ -181,7 +203,90 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 				discord.NewActionRow(
 					selectMenu.Select,
 				),
-			),
+			).WithAllowedMentions(&discord.AllowedMentions{
+			Parse: []discord.AllowedMentionType{},
+		}),
+	)
+
+	return err
+}
+
+func handleGuildSettingsRoleSelect(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error {
+	// cast select role menu
+	roleData, ok := data.(discord.RoleSelectMenuInteractionData)
+
+	if !ok {
+		slog.Error("call to guild settings role select handler was made without a select menu context/whatever")
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("Internal error.").WithEphemeral(true))
+	}
+
+	// check for a guild
+	guild, ok := event.Guild()
+	if !ok {
+		slog.Info("call to guild settings role select was not to a guild.")
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be used in a guild.").WithEphemeral(true))
+	}
+
+	// assume they only selected 1
+	roleID := roleData.Values[0]
+
+	// add to the db
+	db.SetToGuild(db.GetDB(), guild.ID.String(), "verify_role_id", roleID.String())
+
+	// grab a new select and send it off
+	selectMenu, err := getGuildSettingsSelect(guild.ID, event.User().ID)
+
+	if err != nil {
+		slog.Error("failed to get a new select menu for a guild", slog.String("guildID", guild.ID.String()), slog.String("err", err.Error()))
+		event.CreateMessage(discord.NewMessageCreate().WithContent("Internal error. (changes most likely saved)").WithEphemeral(true))
+		return err
+	}
+
+	event.DeferUpdateMessage() // discord requires an acknowledgement before we can edit the original message
+
+	message := getGuildSettingsMessage(selectMenu, &guild.Name)
+
+	_, err = event.UpdateInteractionResponse(
+		discord.NewMessageUpdate().
+			WithContent(message).
+			WithComponents(
+				discord.NewActionRow(
+					selectMenu.Select,
+				),
+			).WithAllowedMentions(&discord.AllowedMentions{
+			Parse: []discord.AllowedMentionType{},
+		}),
+	)
+
+	return err
+}
+
+func handleGuildSettingsCancel(data discord.ButtonInteractionData, event *handler.ComponentEvent) error {
+	guild, ok := event.Guild()
+	if !ok {
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!"))
+	}
+
+	result, err := getGuildSettingsSelect(*event.GuildID(), event.User().ID)
+	if err != nil {
+		event.CreateMessage(discord.NewMessageCreate().WithContent("Internal Error :("))
+		return err
+	}
+
+	event.DeferUpdateMessage()
+	message := getGuildSettingsMessage(result, &guild.Name)
+
+	_, err = event.UpdateInteractionResponse(
+		discord.NewMessageUpdate().
+			WithContent(message).
+			WithComponents(
+				discord.NewActionRow(
+					result.Select,
+				),
+			).
+			WithAllowedMentions(&discord.AllowedMentions{
+				Parse: []discord.AllowedMentionType{},
+			}),
 	)
 
 	return err

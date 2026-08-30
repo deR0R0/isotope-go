@@ -155,6 +155,11 @@ func RegisterSelect(route string, handlerFunc func(data discord.SelectMenuIntera
 	r.SelectMenuComponent(route, handlerFunc)
 }
 
+func RegisterRoleSelect(route string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error) {
+	ensureNoDuplicateRoutes(route)
+	r.SelectMenuComponent(route, handlerFunc)
+}
+
 func SyncDev(guild *snowflake.ID) {
 	handler.SyncCommands(GetClient(), cmds, []snowflake.ID{*guild})
 }

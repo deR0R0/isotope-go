@@ -113,7 +113,7 @@ func (mb *MessageBuilder) BuildMessage() string {
 		case SectionTypeIndent:
 			output += "> " + element.message + "\n"
 		case SectionTypeCodeBlock:
-			output += "```" + element.message + "```\n"
+			output += "`" + element.message + "`\n"
 		case SectionTypeSeperator:
 			output += "\n\u200B"
 		default:
@@ -203,12 +203,21 @@ func CreateNewButton(id string, label string, style discord.ButtonStyle, handler
 	return &button
 }
 
+func CreateNewRestrictedButton(expireSeconds int64, userID snowflake.ID, id string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) *discord.ButtonComponent {
+	route := HandlerRoute{}
+	route.SetBase(id)
+	route.AddRestrictor("expire", strconv.FormatInt(time.Now().Unix(), 10))
+	route.AddRestrictor("author", strconv.FormatUint(uint64(userID), 10))
+	return CreateNewButton(route.GetRoute(), label, style, handlerFunc)
+}
+
 /* select */
 
 type SelectOptions struct {
-	Label string
-	Value string
-	Emoji *discord.ComponentEmoji
+	Label       string
+	Value       string
+	Description string
+	Emoji       *discord.ComponentEmoji
 }
 
 // this is to create a permanent select
@@ -225,7 +234,7 @@ func CreateNewSelect(id string, placeholder string, handlerFunc func(data discor
 			slog.Warn("skipping a select menu option because it's missing either a label or a value.", slog.String("id", id), slog.String("label", opt.Label), slog.String("value", opt.Value))
 			continue
 		}
-		option := discord.NewStringSelectMenuOption(opt.Label, opt.Value)
+		option := discord.NewStringSelectMenuOption(opt.Label, opt.Value).WithDescription(opt.Description)
 		option.Emoji = opt.Emoji
 		options[i] = option
 	}
@@ -250,4 +259,26 @@ func CreateRestrictedSelect(expireSeconds int64, userID snowflake.ID, id string,
 	route.AddRestrictor("expire", strconv.FormatInt(time.Now().Unix(), 10))
 	route.AddRestrictor("author", strconv.FormatUint(uint64(userID), 10))
 	return CreateNewSelect(route.GetRoute(), placeholder, handlerFunc, opts...)
+}
+
+// TODO: split CreateRoleSelect (more options, universal) and CreateRestrictedRoleSelect
+// creates a special discord role select
+func CreateRoleSelect(expireSeconds int64, userID snowflake.ID, id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error) *discord.RoleSelectMenuComponent {
+	route := HandlerRoute{}
+	route.SetBase(id)
+	route.AddRestrictor("expire", strconv.FormatInt(time.Now().Unix(), 10))
+	route.AddRestrictor("author", strconv.FormatUint(uint64(userID), 10))
+
+	finalRoute := "/select/" + route.GetRoute()
+
+	// create a menu with only 1 option available. can later seperate this logic if required.
+	menu := discord.NewRoleSelectMenu(
+		finalRoute,
+		placeholder,
+	).WithMinValues(1).WithMaxValues(1)
+
+	slog.Info("registering new role select menu under route "+finalRoute, slog.String("id", id))
+	RegisterRoleSelect(finalRoute, handlerFunc)
+
+	return &menu
 }

@@ -93,6 +93,38 @@ func getGuildSettingsSelect(guild snowflake.ID, author snowflake.ID) (*guildSett
 	return result, nil
 }
 
+func updateGuildSettingsMessage(event *handler.ComponentEvent, guild discord.Guild) error {
+	event.DeferUpdateMessage() // discord requires an acknowledgement before we can edit the original message
+
+	// update the select
+	selectMenu, err := getGuildSettingsSelect(*event.GuildID(), event.User().ID)
+
+	if err != nil {
+		event.UpdateInteractionResponse(
+			discord.NewMessageUpdate().
+				WithContent("Internal Error.").
+				WithComponents(),
+		)
+	}
+
+	// get the mesage dpedning on the select menu results
+	message := getGuildSettingsMessage(selectMenu, &guild.Name)
+
+	event.UpdateInteractionResponse(
+		discord.NewMessageUpdate().
+			WithContent(message).
+			WithComponents(
+				discord.NewActionRow(
+					selectMenu.Select,
+				),
+			).WithAllowedMentions(&discord.AllowedMentions{
+			Parse: []discord.AllowedMentionType{},
+		}),
+	)
+	
+	return err
+}
+
 func guildSettings(data discord.SlashCommandInteractionData, event *handler.CommandEvent) error {
 	guild, ok := event.Guild()
 	if !ok {
@@ -137,8 +169,6 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!").WithEphemeral(true))
 	}
 
-	event.DeferUpdateMessage() // discord requires an acknowledgement before we can edit the original message
-
 	// determine what to do
 	menuData := data.(discord.StringSelectMenuInteractionData)
 	values := menuData.Values
@@ -160,6 +190,7 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 			}
 		}
 	case "VerifyRole":
+		event.DeferUpdateMessage()
 		// register a "role select" menu and send it
 		roleSelectMenu := CreateRoleSelect(60, event.User().ID, "guild_settings_role", "Select a role for verified members", handleGuildSettingsRoleSelect)
 
@@ -183,30 +214,7 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 		return err
 	}
 
-	// update the select
-	selectMenu, err = getGuildSettingsSelect(*event.GuildID(), event.User().ID)
-
-	if err != nil {
-		event.UpdateInteractionResponse(
-			discord.NewMessageUpdate().
-				WithContent("Internal Error.").
-				WithComponents(),
-		)
-	}
-
-	message := getGuildSettingsMessage(selectMenu, &guild.Name)
-
-	event.UpdateInteractionResponse(
-		discord.NewMessageUpdate().
-			WithContent(message).
-			WithComponents(
-				discord.NewActionRow(
-					selectMenu.Select,
-				),
-			).WithAllowedMentions(&discord.AllowedMentions{
-			Parse: []discord.AllowedMentionType{},
-		}),
-	)
+	updateGuildSettingsMessage(event, guild)
 
 	return err
 }
@@ -233,61 +241,14 @@ func handleGuildSettingsRoleSelect(data discord.SelectMenuInteractionData, event
 	// add to the db
 	db.SetToGuild(db.GetDB(), guild.ID.String(), "verify_role_id", roleID.String())
 
-	// grab a new select and send it off
-	selectMenu, err := getGuildSettingsSelect(guild.ID, event.User().ID)
-
-	if err != nil {
-		slog.Error("failed to get a new select menu for a guild", slog.String("guildID", guild.ID.String()), slog.String("err", err.Error()))
-		event.CreateMessage(discord.NewMessageCreate().WithContent("Internal error. (changes most likely saved)").WithEphemeral(true))
-		return err
-	}
-
-	event.DeferUpdateMessage() // discord requires an acknowledgement before we can edit the original message
-
-	message := getGuildSettingsMessage(selectMenu, &guild.Name)
-
-	_, err = event.UpdateInteractionResponse(
-		discord.NewMessageUpdate().
-			WithContent(message).
-			WithComponents(
-				discord.NewActionRow(
-					selectMenu.Select,
-				),
-			).WithAllowedMentions(&discord.AllowedMentions{
-			Parse: []discord.AllowedMentionType{},
-		}),
-	)
-
-	return err
+	return updateGuildSettingsMessage(event, guild)
 }
 
 func handleGuildSettingsCancel(data discord.ButtonInteractionData, event *handler.ComponentEvent) error {
 	guild, ok := event.Guild()
 	if !ok {
-		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!"))
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!").WithEphemeral(true))
 	}
 
-	result, err := getGuildSettingsSelect(*event.GuildID(), event.User().ID)
-	if err != nil {
-		event.CreateMessage(discord.NewMessageCreate().WithContent("Internal Error :("))
-		return err
-	}
-
-	event.DeferUpdateMessage()
-	message := getGuildSettingsMessage(result, &guild.Name)
-
-	_, err = event.UpdateInteractionResponse(
-		discord.NewMessageUpdate().
-			WithContent(message).
-			WithComponents(
-				discord.NewActionRow(
-					result.Select,
-				),
-			).
-			WithAllowedMentions(&discord.AllowedMentions{
-				Parse: []discord.AllowedMentionType{},
-			}),
-	)
-
-	return err
+	return updateGuildSettingsMessage(event, guild)
 }

@@ -186,6 +186,30 @@ func GetVerifyRoleFromGuild(guild *snowflake.ID) (*discord.Role, error) {
 	return role, nil
 }
 
+func GetVerifyChannelFromGuild(guild *snowflake.ID) (*discord.Channel, error) {
+	channelID, err := db.GetStringFromGuilds(db.GetDB(), guild.String(), "channel_id")
+	if err != nil {
+		return nil, err
+	}
+
+	if channelID == "" {
+		return nil, nil
+	}
+
+	sf, err := snowflake.Parse(channelID)
+	if err != nil {
+		return nil, err
+	}
+
+	// grab channel from discord - why does it return the actual value rather than a pointer?
+	channel, err := client.Rest.GetChannel(sf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &channel, nil
+}
+
 /* Router Component Helpers */
 
 func CreateNewButton(id string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) *discord.ButtonComponent {
@@ -278,7 +302,28 @@ func CreateRoleSelect(expireSeconds int64, userID snowflake.ID, id string, place
 	).WithMinValues(1).WithMaxValues(1)
 
 	slog.Info("registering new role select menu under route "+finalRoute, slog.String("id", id))
-	RegisterRoleSelect(finalRoute, handlerFunc)
+	RegisterSelect(finalRoute, handlerFunc)
+
+	return &menu
+}
+
+// creates a special discord channel select
+func CreateChannelSelect(expireSeconds int64, userID snowflake.ID, id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error) *discord.ChannelSelectMenuComponent {
+	route := HandlerRoute{}
+	route.SetBase(id)
+	route.AddRestrictor("expire", strconv.FormatInt(time.Now().Unix(), 10))
+	route.AddRestrictor("author", strconv.FormatUint(uint64(userID), 10))
+
+	finalRoute := "/select/" + route.GetRoute()
+
+	// create a menu with only 1 option available. can later seperate this logic if required.
+	menu := discord.NewChannelSelectMenu(
+		finalRoute,
+		placeholder,
+	).WithMinValues(1).WithMaxValues(1).WithChannelTypes(discord.ChannelTypeGuildText)
+
+	slog.Info("registering new channel select menu under route "+finalRoute, slog.String("id", id))
+	RegisterSelect(finalRoute, handlerFunc)
 
 	return &menu
 }

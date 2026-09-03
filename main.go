@@ -7,9 +7,9 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/deR0R0/isotope-go/internal/listeners"
 	"github.com/deR0R0/isotope-go/internal/commands"
 	"github.com/deR0R0/isotope-go/internal/db"
+	"github.com/deR0R0/isotope-go/internal/listeners"
 	"github.com/deR0R0/isotope-go/internal/oauth"
 	"github.com/deR0R0/isotope-go/webserver"
 	"github.com/disgoorg/disgo"
@@ -18,7 +18,6 @@ import (
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/joho/godotenv"
-	"github.com/disgoorg/disgo/events"
 )
 
 func main() {
@@ -46,7 +45,7 @@ func main() {
 			cache.WithCaches(cache.FlagGuilds),
 		),
 		bot.WithEventListenerFunc(
-			l
+			listeners.OnReady,
 		),
 	)
 

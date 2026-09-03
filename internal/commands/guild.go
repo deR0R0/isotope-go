@@ -31,7 +31,7 @@ type guildSettingsSelectResult struct {
 	Select       *discord.StringSelectMenuComponent
 	VerifySystem bool
 	Role         *discord.Role
-	Channel *discord.Channel
+	Channel      *discord.Channel
 }
 
 func getGuildSettingsMessage(result *guildSettingsSelectResult, guildName *string, opts ...string) string {
@@ -141,7 +141,7 @@ func updateGuildSettingsMessage(event *handler.ComponentEvent, guild discord.Gui
 			Parse: []discord.AllowedMentionType{},
 		}),
 	)
-	
+
 	return err
 }
 

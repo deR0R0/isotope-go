@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/deR0R0/isotope-go/internal/listeners"
 	"github.com/deR0R0/isotope-go/internal/commands"
 	"github.com/deR0R0/isotope-go/internal/db"
 	"github.com/deR0R0/isotope-go/internal/oauth"
@@ -17,6 +18,7 @@ import (
 	"github.com/disgoorg/disgo/gateway"
 	"github.com/disgoorg/snowflake/v2"
 	"github.com/joho/godotenv"
+	"github.com/disgoorg/disgo/events"
 )
 
 func main() {
@@ -42,6 +44,9 @@ func main() {
 		),
 		bot.WithCacheConfigOpts(
 			cache.WithCaches(cache.FlagGuilds),
+		),
+		bot.WithEventListenerFunc(
+			l
 		),
 	)
 
@@ -75,10 +80,6 @@ func main() {
 	if err != nil {
 		slog.Error("could not connect to gateway.", slog.Any("err", err))
 		panic("could not connect to gateway.")
-	}
-
-	if selfUser, ok := client.Caches.SelfUser(); ok {
-		slog.Info("logged in", slog.Any("user", selfUser.Username))
 	}
 
 	// dont exit. wait for quit via ctrl c

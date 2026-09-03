@@ -90,6 +90,8 @@ func DecodeRouteArgs(route string) map[string]string {
 func InitRouter() {
 	r = handler.New()
 
+	fmt.Println(routes)
+
 	for _, route := range slices.Collect(maps.Keys(tempCmdsStorage)) {
 		slog.Info("registering route " + route)
 		r.SlashCommand(route, tempCmdsStorage[route])
@@ -144,14 +146,15 @@ func ensureNoDuplicateRoutes(route string) {
 func RegisterButton(route string, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) {
 	ensureNoDuplicateRoutes(route)
 
-	// register the button
-	r.ButtonComponent(route, handlerFunc)
+	if r != nil {
+		r.ButtonComponent(route, handlerFunc)
+	}
 }
 
 func RegisterSelect(route string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error) {
 	ensureNoDuplicateRoutes(route)
 
-	// register the button
+	// may be nil, but doesn't matter since we don't call this before bot is started.
 	r.SelectMenuComponent(route, handlerFunc)
 }
 

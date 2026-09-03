@@ -107,7 +107,7 @@ func HandleLogin(param *LoginParams) error {
 		discord.NewMessageCreate().WithContent("Hello! Here's your login link! Expires in <t:"+strconv.Itoa(int(result.ExpireTime))+":R>").WithComponents(discord.LayoutComponent(
 			discord.NewActionRow(
 				discord.NewLinkButton("Login", result.Session.RedirectURI),
-				CreateNewButton("isotope_authorize", "Login", discord.ButtonStylePrimary, loginButtonHandler),
+				CreateNewButton("isotope_authorize", "Login", discord.ButtonStylePrimary, LoginButtonHandler),
 			),
 		)).WithEphemeral(true),
 	)
@@ -132,7 +132,7 @@ func loginCommandHandler(data discord.SlashCommandInteractionData, event *handle
 	return HandleLogin(&LoginParams{UserID: event.User().ID.String(), Rest: event.Client().Rest, ApplicationID: event.ApplicationID(), Token: event.Token()})
 }
 
-func loginButtonHandler(data discord.ButtonInteractionData, event *handler.ComponentEvent) error {
+func LoginButtonHandler(data discord.ButtonInteractionData, event *handler.ComponentEvent) error {
 	event.DeferCreateMessage(true)
 	return HandleLogin(&LoginParams{UserID: event.User().ID.String(), Rest: event.Client().Rest, ApplicationID: event.ApplicationID(), Token: event.Token()})
 }

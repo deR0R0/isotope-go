@@ -258,7 +258,7 @@ func guildSettingsSelectMenu(data discord.SelectMenuInteractionData, event *hand
 	menuData := data.(discord.StringSelectMenuInteractionData)
 	values := menuData.Values
 
-	selectMenu, err := getGuildSettingsSelect(*event.GuildID(), event.User().ID) // "previous" select TODO: REWORK BY SAVING THIS SELECT
+	selectMenu, err := getGuildSettingsSelect(*event.GuildID(), event.User().ID) // current settings
 
 	// handle different values based on their custom values
 	doActionBasedOnSelect(values[0], selectMenu, guild, event)

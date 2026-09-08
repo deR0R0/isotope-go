@@ -107,7 +107,7 @@ func HandleLogin(param *LoginParams) error {
 		discord.NewMessageCreate().WithContent("Hello! Here's your login link! Expires in <t:"+strconv.Itoa(int(result.ExpireTime))+":R>").WithComponents(discord.LayoutComponent(
 			discord.NewActionRow(
 				discord.NewLinkButton("Login", result.Session.RedirectURI),
-				CreateNewButton("isotope_authorize", "Login", discord.ButtonStylePrimary, LoginButtonHandler),
+				//CreateNewButton("isotope_authorize", "Login", discord.ButtonStylePrimary, LoginButtonHandler),
 			),
 		)).WithEphemeral(true),
 	)

@@ -3,7 +3,6 @@ package commands
 import (
 	"fmt"
 	"log/slog"
-	"slices"
 	"strconv"
 	"time"
 
@@ -117,6 +116,7 @@ func (mb *MessageBuilder) BuildMessage() string {
 		case SectionTypeSeperator:
 			output += "\n\u200B"
 		default:
+			slog.Warn("oops, you messed up formatting. here's the element type", slog.Int("type", int(element.sectionType)))
 			output += "You aren't supposed to see this.\n"
 		}
 	}
@@ -125,6 +125,11 @@ func (mb *MessageBuilder) BuildMessage() string {
 }
 
 /* Discord Role Helpers */
+
+// compares two roles to see if they're the same role. (normal comparisons compare all fields, this compares only ID)
+func IsSameRole(role1 discord.Role, role2 discord.Role) bool {
+	return role1.ID == role2.ID
+}
 
 func AddRole(userid string, roleid string, guildid string) error {
 	// get the snowflakes
@@ -146,10 +151,17 @@ func AddRole(userid string, roleid string, guildid string) error {
 	}
 
 	// ensure the role exists in the guild
-	if !slices.Contains(guild.Roles, *role) {
-		slog.Error("guild does't have the role anymore.")
-		// TODO: clear the db of this role if the bot can't find it
-		return fmt.Errorf("guild doesn't have role")
+	foundRole := false	
+	for _, guildRole := range guild.Roles {
+		if IsSameRole(guildRole, *role) {
+			foundRole = true
+			break
+		}
+	}
+	
+	if !foundRole {
+		slog.Info("couldn't find the role you're trying to add in the guild's roles", slog.String("guild_id", guildid), slog.String("role_id", roleid))
+		return fmt.Errorf("couldn't find requested role in guild")
 	}
 
 	// finally add the role

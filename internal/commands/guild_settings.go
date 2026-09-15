@@ -113,7 +113,7 @@ func getGuildSettingsSelect(guild snowflake.ID, author snowflake.ID) (*guildSett
 	return result, nil
 }
 
-func updateGuildSettingsMessage(event *handler.ComponentEvent, guild discord.Guild) error {
+func updateGuildSettingsMessage(event *handler.ComponentEvent, guild discord.Guild, opts ...string) error {
 	event.DeferUpdateMessage() // discord requires an acknowledgement before we can edit the original message
 
 	// update the select
@@ -128,7 +128,7 @@ func updateGuildSettingsMessage(event *handler.ComponentEvent, guild discord.Gui
 	}
 
 	// get the mesage dpedning on the select menu results
-	message := getGuildSettingsMessage(selectMenu, &guild.Name)
+	message := getGuildSettingsMessage(selectMenu, &guild.Name, opts...)
 
 	event.UpdateInteractionResponse(
 		discord.NewMessageUpdate().
@@ -136,6 +136,9 @@ func updateGuildSettingsMessage(event *handler.ComponentEvent, guild discord.Gui
 			WithComponents(
 				discord.NewActionRow(
 					selectMenu.Select,
+				),
+				discord.NewActionRow(
+					CreateNewRestrictedButton(60, event.User().ID, "send_button", "Send Verify Button", discord.ButtonStyleSuccess, handleSendVerifyButton),
 				),
 			).WithAllowedMentions(&discord.AllowedMentions{
 			Parse: []discord.AllowedMentionType{},
@@ -324,3 +327,24 @@ func handleGuildSettingsCancel(data discord.ButtonInteractionData, event *handle
 
 	return updateGuildSettingsMessage(event, guild)
 }
+
+func handleSendVerifyButton(data discord.ButtonInteractionData, event *handler.ComponentEvent) error {
+	guild, ok := event.Guild()
+	if !ok {
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!").WithEphemeral(true))
+	}
+	
+	err := sendVerifyButton(guild.ID.String())
+
+	if err != nil {
+		return updateGuildSettingsMessage(event, guild, err.Error())
+	} else {
+		return updateGuildSettingsMessage(event, guild, "Successfully sent the verification button")
+	}
+}
+
+//
+//
+// VERIFY-RELATED STUFF
+//
+// ignore for now lol

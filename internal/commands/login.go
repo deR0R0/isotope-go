@@ -201,3 +201,45 @@ func HandleNewLogin(state string) error {
 
 	return err
 }
+
+//
+// verify-related stuff
+//
+
+func sendVerifyButton(guild_id string) (error) {
+	guild, err := snowflake.Parse(guild_id)
+
+	if err != nil {
+		return fmt.Errorf("guild error.")
+	}
+
+	role, err := GetVerifyRoleFromGuild(&guild)
+
+	if err != nil || role == nil {
+		return fmt.Errorf("verify role isn't set correctly!")
+	}
+
+	channel, err := GetVerifyChannelFromGuild(&guild)
+
+	if err != nil || channel == nil {
+		return fmt.Errorf("verify channel isn't set correctly")
+	}
+
+	mb := MessageBuilder{}
+	mb.AddMediumHeader("Verification")
+	mb.AddMessage("This TJHSST server has verification enabled. Click the button to continue.")
+
+	_, err = client.Rest.CreateMessage((*channel).ID(), discord.NewMessageCreate().
+		WithContent(mb.BuildMessage()).
+		AddActionRow(
+			CreateNewButton("isotope_authorize", "Verify", discord.ButtonStyleSuccess, LoginButtonHandler),
+		),
+	)
+
+	if err != nil {
+		slog.Error("bot couldn't send verify message", slog.String("err", err.Error()))
+		return fmt.Errorf("bot couldn't send a message there. check permissions?")
+	}
+
+	return nil
+}

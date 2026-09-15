@@ -47,6 +47,9 @@ func main() {
 		bot.WithEventListenerFunc(
 			listeners.OnReady,
 		),
+		bot.WithEventListenerFunc(
+			listeners.OnMemberJoin,
+		),
 	)
 
 	if err != nil {

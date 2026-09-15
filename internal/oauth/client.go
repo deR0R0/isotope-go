@@ -19,6 +19,7 @@ var API_ROUTE_SIGNUPS string = "/signups"
 
 // this function is NOT responsible for parsing json from the api.
 func (m *ManagerStruct) get(userid string, url string) (*http.Response, error) {
+	// TODO: fix the autorefresh token system!
 	session, ok := m.sessions[userid]
 
 	if !ok {

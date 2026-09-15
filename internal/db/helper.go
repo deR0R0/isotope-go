@@ -87,25 +87,24 @@ OAUTH HELPERS
 */
 
 func GetTokenData(db *sql.DB, userid string) (string, string, string, string, error) {
-	rows, err := db.Query(`SELECT access_token, token_type, refresh_token, expiry FROM users WHERE id = ?`, userid)
+	var at, tt, rt, e sql.NullString
+	err := db.QueryRow(`SELECT access_token, token_type, refresh_token, expiry FROM users WHERE id = ?`, userid).Scan(&at, &tt, &rt, &e)
 
 	if err != nil {
 		return "", "", "", "", err
 	}
 
-	defer rows.Close()
-
-	var at, tt, rt, e string
-
-	for rows.Next() {
-		rows.Scan(&at, &tt, &rt, &e)
-	}
-
-	return at, tt, rt, e, nil
+	return at.String, tt.String, rt.String, e.String, nil
 }
 
 func SetTokenData(db *sql.DB, userid string, at string, tt string, rt string, e string) error {
 	_, err := db.Exec("UPDATE users SET access_token = ?, token_type = ?, refresh_token = ?, expiry = ? WHERE id = ?", at, tt, rt, e, userid)
+
+	return err
+}
+
+func ClearTokenData(db *sql.DB, userid string) error {
+	_, err := db.Exec("UPDATE users SET access_token = ?, token_type = ?, refresh_token = ?, expiry = ? WHERE id = ?", nil, nil, nil, nil, userid)
 
 	return err
 }

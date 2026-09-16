@@ -54,7 +54,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	slog.Info("testing user's oauth session by sending a profile request...")
 
-	fmt.Fprintf(w, "%s", "<h1>Welcome, "+profile.Ion_Username+"</h1>\n<p>Hello "+profile.Full_Name+"! You may return to discord.</p><p>Details: "+profile.Ion_Username+" is linked to "+userid)
+	fmt.Fprintf(w, "%s", "<h1>Hello, "+profile.Full_Name+"!</h1>\n <h2>Your Ion OAuth is stored, which can be used to immediately verify in other TJHSST servers protected by Isotope. You may, at any time, run command /logout to unenroll your Ion account, and your data will be deleted. (but you'll miss out on auto verification AND eighth period features!!)</h2> <p>You may return to discord.</p><p>Details: "+profile.Ion_Username+" is linked to "+userid)
 }
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {

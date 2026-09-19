@@ -37,14 +37,8 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s", "There was an error while exchanging for your token! Try again later. DM an admin with this err: "+err.Error())
 		return
 	}
-
-	// actually get the bot to add the roles to the user
-	err = commands.HandleNewLogin(state)
-	if err != nil {
-		fmt.Fprintf(w, "%s", "Oops, there was an issue while adding your discord roles. DM an admin with this err: "+err.Error())
-		return
-	}
-
+	
+	slog.Info("testing user's oauth session by sending a profile request...")
 	userid, _ := db.GetUserFromState(db.GetDB(), state)
 	profile, err := oauth.Manager().GetProfile(userid)
 	if err != nil {
@@ -52,7 +46,13 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s", "Oops, looks like there was an issue while fetching your profile... DM an admin with this err: "+err.Error())
 		return
 	}
-	slog.Info("testing user's oauth session by sending a profile request...")
+	
+	// actually get the bot to add the roles to the user
+	err = commands.HandleNewLogin(state, profile.Full_Name, profile.Grad_Year)
+	if err != nil {
+		fmt.Fprintf(w, "%s", "Oops, there was an issue while adding your discord roles. DM an admin with this err: "+err.Error())
+		return
+	}
 
 	fmt.Fprintf(w, "%s", "<h1>Hello, "+profile.Full_Name+"!</h1>\n <h2>Your Ion OAuth is stored, which can be used to immediately verify in other TJHSST servers protected by Isotope. You may, at any time, run command /logout to unenroll your Ion account, and your data will be deleted. (but you'll miss out on auto verification AND eighth period features!!)</h2> <p>You may return to discord.</p><p>Details: "+profile.Ion_Username+" is linked to "+userid)
 }

@@ -61,6 +61,14 @@ var migrations = []string{
 	`
 	ALTER TABLE guilds ADD verify_enabled BOOLEAN;
 	`,
+	/*
+		Added:
+			guilds:
+				log_channel - channel for all the logs
+	*/
+	`
+	ALTER TABLE guilds ADD log_channel TEXT;	
+	`,
 }
 
 func migrateDB(database *sql.DB) error {

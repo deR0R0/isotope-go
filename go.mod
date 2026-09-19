@@ -3,7 +3,7 @@ module github.com/deR0R0/isotope-go
 go 1.26.2
 
 require (
-	github.com/disgoorg/disgo v0.19.3
+	github.com/disgoorg/disgo v0.19.6
 	github.com/disgoorg/snowflake/v2 v2.0.3
 	github.com/joho/godotenv v1.5.1
 	github.com/mattn/go-sqlite3 v1.14.44

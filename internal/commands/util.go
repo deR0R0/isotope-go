@@ -222,6 +222,30 @@ func GetVerifyChannelFromGuild(guild *snowflake.ID) (*discord.Channel, error) {
 	return &channel, nil
 }
 
+func GetLogChannelFromGuild(guild *snowflake.ID) (*discord.Channel, error) {
+	channelID, err := db.GetStringFromGuilds(db.GetDB(), guild.String(), "log_channel")
+	if err != nil {
+		return nil, err
+	}
+
+	if channelID == "" {
+		return nil, nil
+	}
+
+	sf, err := snowflake.Parse(channelID)
+	if err != nil {
+		return nil, err
+	}
+
+	// grab channel from discord - why does it return the actual value rather than a pointer?
+	channel, err := client.Rest.GetChannel(sf)
+	if err != nil {
+		return nil, err
+	}
+
+	return &channel, nil
+}
+
 /* Router Component Helpers */
 
 func CreateNewButton(id string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) *discord.ButtonComponent {

@@ -137,7 +137,7 @@ func LoginButtonHandler(data discord.ButtonInteractionData, event *handler.Compo
 	return HandleLogin(&LoginParams{UserID: event.User().ID.String(), Rest: event.Client().Rest, ApplicationID: event.ApplicationID(), Token: event.Token()})
 }
 
-func HandleNewLogin(state string) error {
+func HandleNewLogin(state string, name string, grad int) error {
 	// ensure this is actually their first time verifying
 	userid, err := db.GetUserFromState(db.GetDB(), state)
 
@@ -187,6 +187,8 @@ func HandleNewLogin(state string) error {
 			slog.Error("err while adding role", slog.String("err", err.Error()))
 			continue
 		}
+
+		SendLog(guild, Normal, "A member was verified as " + name + " (" + strconv.Itoa(grad) + ") through OAuth.", nil, discord.EmbedField{Name: "The user is here: ", Value: "<@" + userid + ">"})
 
 		serversVerified++
 	}

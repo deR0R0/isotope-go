@@ -29,6 +29,7 @@ func init() {
 
 type guildSettingsSelectResult struct {
 	Select       *discord.StringSelectMenuComponent
+	LogChannel   *discord.Channel
 	VerifySystem bool
 	Role         *discord.Role
 	Channel      *discord.Channel
@@ -43,6 +44,12 @@ func getGuildSettingsMessage(result *guildSettingsSelectResult, guildName *strin
 	}
 
 	message.AddMediumHeader(*guildName + " Settings")
+
+	if result.LogChannel != nil {
+		message.AddMessage("**Logging Channel**: <#" + (*result.LogChannel).ID().String() + ">")
+	} else {
+		message.AddMessage("**Logging Channel**: None Set")
+	}
 
 	if result.VerifySystem {
 		message.AddMessage("**Verify System**: Enabled :white_check_mark:")
@@ -70,6 +77,19 @@ func getGuildSettingsSelect(guild snowflake.ID, author snowflake.ID) (*guildSett
 	selectMenuOptions := []SelectOptions{}
 
 	// get the data from the db
+
+	// logging
+	// TODO: make better helper functions so i dont have this trash
+	logChannel, err := GetLogChannelFromGuild(&guild)	
+	if err != nil {
+		return nil, err
+	}
+
+	result.LogChannel = logChannel
+
+	selectMenuOptions = append(selectMenuOptions, SelectOptions{Label: "Change Logging Channel", Value: "LogChannel", Emoji: &discord.ComponentEmoji{Name: "✍️"}})
+
+	// verify enabled?
 	verifyEnabled, err := db.GetBoolFromGuilds(db.GetDB(), guild.String(), "verify_enabled")
 	if err != nil {
 		return nil, err
@@ -236,6 +256,27 @@ func doActionBasedOnSelect(option string, selectMenu *guildSettingsSelectResult,
 				Parse: []discord.AllowedMentionType{},
 			}),
 		)
+	case "LogChannel":
+		event.DeferUpdateMessage()
+
+		channelSelectMenu := CreateChannelSelect(60, event.User().ID, "guild_settings_log_channel", "Select a channel for logging", handleGuildSettingsLogChannelSelect)
+
+		message := getGuildSettingsMessage(selectMenu, &guild.Name, "Choose the channel that logging will happen in...")
+
+		_, err = event.UpdateInteractionResponse(
+			discord.NewMessageUpdate().
+				WithContent(message).
+				WithComponents(
+					discord.NewActionRow(
+						channelSelectMenu,
+					),
+					discord.NewActionRow(
+						CreateNewRestrictedButton(60, event.User().ID, "cancel", "Cancel", discord.ButtonStyleDanger, handleGuildSettingsCancel),
+					),
+				).WithAllowedMentions(&discord.AllowedMentions{
+				Parse: []discord.AllowedMentionType{},
+			}),
+		)
 	}
 
 	return err
@@ -289,6 +330,8 @@ func handleGuildSettingsRoleSelect(data discord.SelectMenuInteractionData, event
 	roleID := roleData.Values[0]
 
 	// add to the db
+    slog.Info("verify_role_id setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
+	SendLog(guild, Important, "The verify role for this server was changed!", &event.Member().User)
 	db.SetToGuild(db.GetDB(), guild.ID.String(), "verify_role_id", roleID.String())
 
 	return updateGuildSettingsMessage(event, guild)
@@ -314,7 +357,36 @@ func handleGuildSettingsChannelSelect(data discord.SelectMenuInteractionData, ev
 	channelID := channelData.Values[0]
 
 	// add to the db
+    slog.Info("authorize_channel setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
+	SendLog(guild, Important, "The verification channel for this server was changed!", &event.Member().User)
 	db.SetToGuild(db.GetDB(), guild.ID.String(), "channel_id", channelID.String())
+
+	return updateGuildSettingsMessage(event, guild)
+}
+
+func handleGuildSettingsLogChannelSelect(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error {
+	// cast select role menu
+	channelData, ok := data.(discord.ChannelSelectMenuInteractionData)
+
+	if !ok {
+		slog.Error("call to guild settings channel select handler was made without a select menu context/whatever")
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("Internal error.").WithEphemeral(true))
+	}
+
+	// check for a guild
+	guild, ok := event.Guild()
+	if !ok {
+		slog.Info("call to guild settings role select was not to a guild.")
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be used in a guild.").WithEphemeral(true))
+	}
+
+	// assume they only selected 1
+	channelID := channelData.Values[0]
+	
+	// add to the db
+	slog.Info("log_channel setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
+	SendLog(guild, Important, "The log channel for this server was changed!", &event.Member().User)
+	db.SetToGuild(db.GetDB(), guild.ID.String(), "log_channel", channelID.String())
 
 	return updateGuildSettingsMessage(event, guild)
 }
@@ -333,6 +405,9 @@ func handleSendVerifyButton(data discord.ButtonInteractionData, event *handler.C
 	if !ok {
 		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!").WithEphemeral(true))
 	}
+
+	slog.Info("the verify button was re-sent in a guild", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
+	SendLog(guild, Important, "The verify button was resent!", &event.Member().User)
 	
 	err := sendVerifyButton(guild.ID.String())
 

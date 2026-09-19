@@ -272,7 +272,7 @@ func SetToUsers(db *sql.DB, userid string, key string, value any) error {
 
 func GetFromGuilds(db *sql.DB, guildid string, key string) (any, error) {
 	// sanitize input because we can't use ? placeholders in the sqlite3 thing
-	allowedKeys := []string{"verify_role_id", "channel_id", "verify_enabled"}
+	allowedKeys := []string{"verify_role_id", "channel_id", "verify_enabled", "log_channel"}
 
 	if !slices.Contains(allowedKeys, key) {
 		return nil, fmt.Errorf("unallowed key")
@@ -296,7 +296,6 @@ func GetFromGuilds(db *sql.DB, guildid string, key string) (any, error) {
 
 func GetStringFromGuilds(db *sql.DB, guildid string, key string) (string, error) {
 	value, err := GetFromGuilds(db, guildid, key)
-
 	if err != nil {
 		return "", err
 	}
@@ -335,7 +334,7 @@ func GetBoolFromGuilds(db *sql.DB, guildid string, key string) (bool, error) {
 }
 
 func SetToGuild(db *sql.DB, guildid string, key string, value any) error {
-	allowedKeys := []string{"verify_role_id", "channel_id", "verify_enabled"}
+	allowedKeys := []string{"verify_role_id", "channel_id", "verify_enabled", "log_channel"}
 
 	if !slices.Contains(allowedKeys, key) {
 		return fmt.Errorf("unallowed key")

@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"log/slog"
 	"os"
 	"os/signal"
@@ -25,8 +26,19 @@ func main() {
 	db.Init()
 	oauth.Init()
 
-	db.DeleteUser(db.GetDB(), "668626305188757536")
-	//db.DeleteGuild(db.GetDB(), "1277325141587525682")
+	// parse our flags
+	clearDevData := flag.Bool("clear-dev", false, "Clear Dev Data")
+	dbOnly := flag.Bool("db-only", false, "Runs through database provisioning, then exits.")
+
+	if *dbOnly {
+		return
+	}
+
+	if *clearDevData {
+		db.DeleteUser(db.GetDB(), "668626305188757536")
+		db.DeleteGuild(db.GetDB(), "1277325141587525682")
+		return
+	}
 
 	// run the web server in a goroutine
 	go func() {

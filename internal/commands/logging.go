@@ -15,28 +15,12 @@ type ImportanceLevel int
 const (
 	Normal ImportanceLevel = iota
 	Important
+	Warning
+	Danger
 )
 
-func SendLog(guild discord.Guild, importance ImportanceLevel, message string, author *discord.User, opts ...discord.EmbedField) {
-	// build embed
-	logEmbed := discord.Embed{}.WithTitle(message)
-
-	switch importance {
-	case Normal:
-		logEmbed = logEmbed.WithColor(0x4287f5)
-	case Important:
-		logEmbed = logEmbed.WithColor(0xebdc10)
-	}
-
-	if author != nil {
-		logEmbed = logEmbed.WithAuthor(author.Username, "", *(*author).AvatarURL())
-	}
-
-	for _, opt := range opts {
-		logEmbed = logEmbed.AddField(opt.Name, opt.Value, true)
-	}
-
-	// send the embed
+func SendLog(importance ImportanceLevel, guild discord.Guild, header string, message string) {
+	// send the log message
 	channel, err := GetLogChannelFromGuild(&guild.ID)
 
 	if err != nil {
@@ -49,7 +33,30 @@ func SendLog(guild discord.Guild, importance ImportanceLevel, message string, au
 		return
 	}
 
-	_, err = client.Rest.CreateMessage((*channel).ID(), discord.NewMessageCreate().WithEmbeds(logEmbed).WithAllowedMentions(&discord.AllowedMentions{Parse: []discord.AllowedMentionType{}}))
+	logMessage := GetNewMessageBuilder()
+
+	importanceEmoji := "⬜️"
+
+	switch importance {
+	case Important:
+		importanceEmoji = "🟨"
+	case Warning:
+		importanceEmoji = "⚠️"
+	case Danger:
+		importanceEmoji = "⚠️⚠️⚠️" // very creative i know
+	}
+
+	logMessage.AddMessage(importanceEmoji + " **" + header + "** " + importanceEmoji)
+	logMessage.AddMessage(message)
+
+	_, err = client.Rest.CreateMessage(
+		(*channel).ID(),
+		discord.NewMessageCreate().
+			WithContent(logMessage.BuildMessage()).
+			WithAllowedMentions(&discord.AllowedMentions{
+				Parse: []discord.AllowedMentionType{},
+			}),
+	)
 
 	if err != nil {
 		slog.Error("err while sending a log message", slog.String("err", err.Error()))

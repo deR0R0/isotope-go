@@ -188,7 +188,7 @@ func HandleNewLogin(state string, name string, grad int) error {
 			continue
 		}
 
-		SendLog(guild, Normal, "A member was verified as "+name+" ("+strconv.Itoa(grad)+") through OAuth.", nil, discord.EmbedField{Name: "The user is here: ", Value: "<@" + userid + ">"})
+		SendLog(Normal, guild, "User Verified", "<@"+userid+"> verified through Ion as `"+name+strconv.Itoa(grad)+"`")
 
 		serversVerified++
 	}

@@ -331,7 +331,7 @@ func handleGuildSettingsRoleSelect(data discord.SelectMenuInteractionData, event
 
 	// add to the db
 	slog.Info("verify_role_id setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
-	SendLog(guild, Important, "The verify role for this server was changed!", &event.Member().User)
+	SendLog(Important, guild, "Verify Role Changed", event.User().Mention()+" changed the guild's verify role to <@&"+roleID.String()+">")
 	db.SetToGuild(db.GetDB(), guild.ID.String(), "verify_role_id", roleID.String())
 
 	return updateGuildSettingsMessage(event, guild)
@@ -358,7 +358,7 @@ func handleGuildSettingsChannelSelect(data discord.SelectMenuInteractionData, ev
 
 	// add to the db
 	slog.Info("authorize_channel setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
-	SendLog(guild, Important, "The verification channel for this server was changed!", &event.Member().User)
+	SendLog(Important, guild, "Verify Channel Changed", event.User().Mention()+" changed the guild's verify channel to <#"+channelID.String()+">")
 	db.SetToGuild(db.GetDB(), guild.ID.String(), "channel_id", channelID.String())
 
 	return updateGuildSettingsMessage(event, guild)
@@ -385,7 +385,8 @@ func handleGuildSettingsLogChannelSelect(data discord.SelectMenuInteractionData,
 
 	// add to the db
 	slog.Info("log_channel setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
-	SendLog(guild, Important, "The log channel for this server was changed!", &event.Member().User)
+
+	SendLog(Important, guild, "Log Channel Changed", event.User().Mention()+" changed the log channel to <#"+channelID.String()+">")
 	db.SetToGuild(db.GetDB(), guild.ID.String(), "log_channel", channelID.String())
 
 	return updateGuildSettingsMessage(event, guild)
@@ -407,7 +408,7 @@ func handleSendVerifyButton(data discord.ButtonInteractionData, event *handler.C
 	}
 
 	slog.Info("the verify button was re-sent in a guild", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
-	SendLog(guild, Important, "The verify button was resent!", &event.Member().User)
+	SendLog(Important, guild, "Verify Button Resent", event.User().Mention()+" resent the guild's verify button.")
 
 	err := sendVerifyButton(guild.ID.String())
 

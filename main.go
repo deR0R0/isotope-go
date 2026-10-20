@@ -30,6 +30,8 @@ func main() {
 	clearDevData := flag.Bool("clear-dev", false, "Clear Dev Data")
 	dbOnly := flag.Bool("db-only", false, "Runs through database provisioning, then exits.")
 
+	flag.Parse()
+
 	if *dbOnly {
 		return
 	}

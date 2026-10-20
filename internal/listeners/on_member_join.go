@@ -33,7 +33,7 @@ func OnMemberJoin(event *events.GuildMemberJoin) {
 	if at == "" {
 		// TODO: send logging!
 		slog.Info("skipped automatic verification for user because they're not verified", slog.String("user", userID.Username))
-		return 
+		return
 	}
 
 	// add role to the user

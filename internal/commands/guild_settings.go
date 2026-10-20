@@ -80,7 +80,7 @@ func getGuildSettingsSelect(guild snowflake.ID, author snowflake.ID) (*guildSett
 
 	// logging
 	// TODO: make better helper functions so i dont have this trash
-	logChannel, err := GetLogChannelFromGuild(&guild)	
+	logChannel, err := GetLogChannelFromGuild(&guild)
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +330,7 @@ func handleGuildSettingsRoleSelect(data discord.SelectMenuInteractionData, event
 	roleID := roleData.Values[0]
 
 	// add to the db
-    slog.Info("verify_role_id setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
+	slog.Info("verify_role_id setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
 	SendLog(guild, Important, "The verify role for this server was changed!", &event.Member().User)
 	db.SetToGuild(db.GetDB(), guild.ID.String(), "verify_role_id", roleID.String())
 
@@ -357,7 +357,7 @@ func handleGuildSettingsChannelSelect(data discord.SelectMenuInteractionData, ev
 	channelID := channelData.Values[0]
 
 	// add to the db
-    slog.Info("authorize_channel setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
+	slog.Info("authorize_channel setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
 	SendLog(guild, Important, "The verification channel for this server was changed!", &event.Member().User)
 	db.SetToGuild(db.GetDB(), guild.ID.String(), "channel_id", channelID.String())
 
@@ -382,7 +382,7 @@ func handleGuildSettingsLogChannelSelect(data discord.SelectMenuInteractionData,
 
 	// assume they only selected 1
 	channelID := channelData.Values[0]
-	
+
 	// add to the db
 	slog.Info("log_channel setting was changed!", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
 	SendLog(guild, Important, "The log channel for this server was changed!", &event.Member().User)
@@ -408,7 +408,7 @@ func handleSendVerifyButton(data discord.ButtonInteractionData, event *handler.C
 
 	slog.Info("the verify button was re-sent in a guild", slog.String("guild_id", guild.ID.String()), slog.String("user", event.Member().User.Username))
 	SendLog(guild, Important, "The verify button was resent!", &event.Member().User)
-	
+
 	err := sendVerifyButton(guild.ID.String())
 
 	if err != nil {

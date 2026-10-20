@@ -188,7 +188,7 @@ func HandleNewLogin(state string, name string, grad int) error {
 			continue
 		}
 
-		SendLog(guild, Normal, "A member was verified as " + name + " (" + strconv.Itoa(grad) + ") through OAuth.", nil, discord.EmbedField{Name: "The user is here: ", Value: "<@" + userid + ">"})
+		SendLog(guild, Normal, "A member was verified as "+name+" ("+strconv.Itoa(grad)+") through OAuth.", nil, discord.EmbedField{Name: "The user is here: ", Value: "<@" + userid + ">"})
 
 		serversVerified++
 	}
@@ -208,7 +208,7 @@ func HandleNewLogin(state string, name string, grad int) error {
 // verify-related stuff
 //
 
-func sendVerifyButton(guild_id string) (error) {
+func sendVerifyButton(guild_id string) error {
 	guild, err := snowflake.Parse(guild_id)
 
 	if err != nil {

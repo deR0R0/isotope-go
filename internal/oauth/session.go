@@ -20,7 +20,7 @@ type Session struct {
 	State       string
 	RedirectURI string
 	Token       *oauth2.Token
-	mu sync.Mutex
+	mu          sync.Mutex
 }
 
 type ManagerStruct struct {
@@ -108,9 +108,9 @@ func Init() {
 		}
 
 		s := &Session{
-			State: state,
+			State:       state,
 			RedirectURI: uri,
-			Token: token,
+			Token:       token,
 		}
 
 		slog.Info("successfully resumed user", slog.String("id", user))

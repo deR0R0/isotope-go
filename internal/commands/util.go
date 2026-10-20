@@ -151,14 +151,14 @@ func AddRole(userid string, roleid string, guildid string) error {
 	}
 
 	// ensure the role exists in the guild
-	foundRole := false	
+	foundRole := false
 	for _, guildRole := range guild.Roles {
 		if IsSameRole(guildRole, *role) {
 			foundRole = true
 			break
 		}
 	}
-	
+
 	if !foundRole {
 		slog.Info("couldn't find the role you're trying to add in the guild's roles", slog.String("guild_id", guildid), slog.String("role_id", roleid))
 		return fmt.Errorf("couldn't find requested role in guild")

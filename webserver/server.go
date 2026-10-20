@@ -37,7 +37,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s", "There was an error while exchanging for your token! Try again later. DM an admin with this err: "+err.Error())
 		return
 	}
-	
+
 	slog.Info("testing user's oauth session by sending a profile request...")
 	userid, _ := db.GetUserFromState(db.GetDB(), state)
 	profile, err := oauth.Manager().GetProfile(userid)
@@ -46,7 +46,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "%s", "Oops, looks like there was an issue while fetching your profile... DM an admin with this err: "+err.Error())
 		return
 	}
-	
+
 	// actually get the bot to add the roles to the user
 	err = commands.HandleNewLogin(state, profile.Full_Name, profile.Grad_Year)
 	if err != nil {

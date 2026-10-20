@@ -32,7 +32,7 @@ func (m *ManagerStruct) get(userid string, url string) (*http.Response, error) {
 		return nil, fmt.Errorf("user has no token")
 	}
 
-	session.mu.Lock() // lock 
+	session.mu.Lock() // lock
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
@@ -40,7 +40,7 @@ func (m *ManagerStruct) get(userid string, url string) (*http.Response, error) {
 	newToken, err := m.config.TokenSource(ctx, session.Token).Token()
 	if err != nil {
 		session.mu.Unlock()
-		return nil, fmt.Errorf("couldn't refresh a user's token. userid: "+userid)
+		return nil, fmt.Errorf("%s", "couldn't refresh a user's token. userid: "+userid)
 	}
 
 	if newToken.AccessToken != session.Token.AccessToken {
@@ -63,7 +63,7 @@ func (m *ManagerStruct) GetProfile(userid string) (Profile, error) {
 		slog.Error("error while getting profile", slog.String("user", userid), slog.String("err", err.Error()))
 		return profileRes, err
 	}
-	
+
 	defer res.Body.Close()
 
 	// parse the body in json

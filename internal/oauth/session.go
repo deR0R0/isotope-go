@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/deR0R0/isotope-go/internal/db"
@@ -19,6 +20,7 @@ type Session struct {
 	State       string
 	RedirectURI string
 	Token       *oauth2.Token
+	mu sync.Mutex
 }
 
 type ManagerStruct struct {
@@ -106,9 +108,9 @@ func Init() {
 		}
 
 		s := &Session{
-			state,
-			uri,
-			token,
+			State: state,
+			RedirectURI: uri,
+			Token: token,
 		}
 
 		slog.Info("successfully resumed user", slog.String("id", user))

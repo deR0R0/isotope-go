@@ -50,6 +50,9 @@ func main() {
 	// create the client
 	slog.Info("creating the client")
 	client, err := disgo.New(DISCORD_TOKEN,
+		bot.WithEventManagerConfigOpts(
+			bot.WithAsyncEventsEnabled(),
+		),
 		bot.WithGatewayConfigOpts(
 			gateway.WithIntents(gateway.IntentGuilds, gateway.IntentGuildMembers, gateway.IntentDirectMessages, gateway.IntentGuildMessages, gateway.IntentMessageContent),
 		),

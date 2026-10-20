@@ -7,6 +7,9 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+
+	"github.com/deR0R0/isotope-go/internal/db"
+	"golang.org/x/oauth2"
 )
 
 var API_ROUTE_BASE = "https://ion.tjhsst.edu/api"
@@ -19,21 +22,35 @@ var API_ROUTE_SIGNUPS string = "/signups"
 
 // this function is NOT responsible for parsing json from the api.
 func (m *ManagerStruct) get(userid string, url string) (*http.Response, error) {
-	// TODO: fix the autorefresh token system!
 	session, ok := m.sessions[userid]
 
 	if !ok {
 		return nil, fmt.Errorf("userid doesn't exist")
 	}
 
-	if !session.Token.Valid() {
-		return nil, fmt.Errorf("user has invalid token")
+	if session.Token == nil {
+		return nil, fmt.Errorf("user has no token")
 	}
 
+	session.mu.Lock() // lock 
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	client := m.config.Client(ctx, session.Token)
+	// check for token refresh
+	newToken, err := m.config.TokenSource(ctx, session.Token).Token()
+	if err != nil {
+		session.mu.Unlock()
+		return nil, fmt.Errorf("couldn't refresh a user's token. userid: "+userid)
+	}
+
+	if newToken.AccessToken != session.Token.AccessToken {
+		session.Token = newToken
+		go db.SaveTokenToDB(db.GetDB(), userid, newToken)
+	}
+	session.mu.Unlock()
+
+	client := oauth2.NewClient(ctx, oauth2.StaticTokenSource(newToken))
+	client.Timeout = 3 * time.Second
 
 	return client.Get(url)
 }
@@ -46,6 +63,8 @@ func (m *ManagerStruct) GetProfile(userid string) (Profile, error) {
 		slog.Error("error while getting profile", slog.String("user", userid), slog.String("err", err.Error()))
 		return profileRes, err
 	}
+	
+	defer res.Body.Close()
 
 	// parse the body in json
 	if err = json.NewDecoder(res.Body).Decode(&profileRes); err != nil {

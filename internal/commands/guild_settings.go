@@ -174,6 +174,10 @@ func guildSettings(data discord.SlashCommandInteractionData, event *handler.Comm
 		return event.CreateMessage(discord.NewMessageCreate().WithContent("This command can only be run in a guild/server!"))
 	}
 
+	if !event.Member().Permissions.Has(discord.PermissionManageGuild) {
+		return event.CreateMessage(discord.NewMessageCreate().WithContent("Sorry... you don't have permissions to run this command. You need the `Manage Guild` permission."))
+	}
+
 	result, err := getGuildSettingsSelect(*event.GuildID(), event.User().ID)
 	if err != nil {
 		event.CreateMessage(discord.NewMessageCreate().WithContent("Internal Error :("))

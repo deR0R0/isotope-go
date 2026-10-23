@@ -150,6 +150,11 @@ func HandleNewLogin(state string, name string, grad int) error {
 
 	first_time, err := db.GetFromUsers(db.GetDB(), userid, "firstTimeVerifying")
 
+	if err != nil {
+		slog.Warn("error while getting first time from the database", slog.String("err", err.Error()), slog.String("name", name))
+		return err
+	}
+
 	ft, ok := first_time.(bool)
 	if !ok {
 		slog.Error("first_time return from the db is not bool type")
@@ -165,11 +170,6 @@ func HandleNewLogin(state string, name string, grad int) error {
 
 	// first, process through the bot's cache for each guild
 	for guild := range client.Caches.Guilds() {
-		if err != nil {
-			slog.Warn("couldn't get member from guild. most likely not in the guild ", slog.String("err", err.Error()))
-			continue
-		}
-
 		role_id, _, err := db.GetGuildAuthData(db.GetDB(), guild.ID.String())
 
 		if err != nil {

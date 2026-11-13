@@ -188,7 +188,7 @@ func HandleNewLogin(state string, name string, grad int) error {
 			continue
 		}
 
-		SendLog(Normal, guild, "User Verified", "<@"+userid+"> verified through Ion as `"+name+strconv.Itoa(grad)+"`")
+		SendLog(Normal, &guild.ID, "User Verified", "<@"+userid+"> verified through Ion as `"+name+strconv.Itoa(grad)+"`")
 
 		serversVerified++
 	}

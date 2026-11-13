@@ -19,7 +19,7 @@ func OnMemberJoin(event *events.GuildMemberJoin) {
 	}
 
 	if !exists {
-		slog.Info("tried doing on memeber join event but they dont exist", slog.String("user", userID.Username))
+		slog.Info("tried member on join auto verify but they do not exist in the database.", slog.String("user", userID.Username))
 		return
 	}
 

@@ -5,24 +5,114 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strings"
 	"time"
 
 	"golang.org/x/oauth2"
 )
 
 /*
+QUERY STUFF
+*/
+
+type DBTypes interface {
+	string | int | bool
+}
+
+func queryWithConstraint[T DBTypes](db *sql.DB, query string, constraints map[string]string) (*T, error) {
+	if len(constraints) == 0 {
+		return nil, fmt.Errorf("require at least one constraint")
+	}
+
+	var columns []string
+	var columnValues []interface{}
+
+	for key, value := range constraints {
+		columns = append(columns, fmt.Sprintf("%s = ?", key))
+		columnValues = append(columnValues, value)
+	}
+
+	// need this to safely handle null values in the db!
+	var dbResult sql.Null[T]
+
+	dbQuery := query + " WHERE " + strings.Join(columns, " AND ")
+	err := db.QueryRow(dbQuery, columnValues...).Scan(&dbResult)
+	if err != nil {
+		return nil, err
+	}
+
+	// check for sql null
+	if !dbResult.Valid {
+		return nil, nil
+	}
+
+	return &dbResult.V, nil
+}
+
+func query[T DBTypes](db *sql.DB, query string) (*T, error) {
+	var dbResult sql.Null[T]
+
+	err := db.QueryRow(query).Scan(&dbResult)
+	if err != nil {
+		return nil, err
+	}
+
+	if !dbResult.Valid {
+		return nil, nil
+	}
+
+	return &dbResult.V, nil
+}
+
+func Update[V any](db *sql.DB, table string, values map[string]V) error {
+	if len(values) == 0 {
+		return nil
+	}
+
+	var setColumns []string
+	var columnValues []any
+
+	for key, value := range values {
+		setColumns = append(setColumns, fmt.Sprintf("%s = ?", key))
+		columnValues = append(columnValues, value)
+	}
+
+	dbQuery := fmt.Sprintf(
+		"UPDATE %s SET %s",
+		table,
+		strings.Join(setColumns, ", "),
+	)
+
+	_, err := db.Exec(dbQuery, columnValues...)
+	return err
+}
+
+func GetOne[T DBTypes](db *sql.DB, table string, column string, constraints map[string]string) (*T, error) {
+	dbQuery := fmt.Sprintf("SELECT %s FROM %s", column, table)
+	result, err := queryWithConstraint[T](db, dbQuery, constraints)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func Exists(db *sql.DB, table string, column string, value string) (bool, error) {
+	dbQuery := fmt.Sprintf("SELECT EXISTS(SELECT 1 FROM %s WHERE %s = ?)", table, column)
+	var exists bool
+	err := db.QueryRow(dbQuery, value).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+/*
 USER STUFF
 */
 
 func UserExists(db *sql.DB, userid string) (bool, error) {
-	var e bool
-	err := db.QueryRow("SELECT EXISTS(SELECT 1 FROM users WHERE id = ?)", userid).Scan(&e)
-
-	if err != nil {
-		return false, err
-	}
-
-	return e, nil
+	return Exists(db, "users", "id", userid)
 }
 
 func CreateUser(db *sql.DB, userid string) error {

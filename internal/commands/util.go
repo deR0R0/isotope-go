@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/deR0R0/isotope-go/internal/db"
@@ -11,6 +12,7 @@ import (
 	"github.com/disgoorg/disgo/discord"
 	"github.com/disgoorg/disgo/handler"
 	"github.com/disgoorg/snowflake/v2"
+	"github.com/lithammer/shortuuid/v5"
 )
 
 /* CLIENT STUFF */
@@ -222,30 +224,6 @@ func GetVerifyChannelFromGuild(guild *snowflake.ID) (*discord.Channel, error) {
 	return &channel, nil
 }
 
-func GetLogChannelFromGuild(guild *snowflake.ID) (*discord.Channel, error) {
-	channelID, err := db.GetStringFromGuilds(db.GetDB(), guild.String(), "log_channel")
-	if err != nil {
-		return nil, err
-	}
-
-	if channelID == "" {
-		return nil, nil
-	}
-
-	sf, err := snowflake.Parse(channelID)
-	if err != nil {
-		return nil, err
-	}
-
-	// grab channel from discord - why does it return the actual value rather than a pointer?
-	channel, err := client.Rest.GetChannel(sf)
-	if err != nil {
-		return nil, err
-	}
-
-	return &channel, nil
-}
-
 /* Router Component Helpers */
 
 func CreateNewButton(id string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) *discord.ButtonComponent {
@@ -271,7 +249,9 @@ func CreateNewRestrictedButton(expireSeconds int64, userID snowflake.ID, id stri
 	return CreateNewButton(route.GetRoute(), label, style, handlerFunc)
 }
 
-/* select */
+/*
+SELECT MENU STUFF
+*/
 
 type SelectOptions struct {
 	Label       string
@@ -280,10 +260,53 @@ type SelectOptions struct {
 	Emoji       *discord.ComponentEmoji
 }
 
-// this is to create a permanent select
-func CreateNewSelect(id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error, opts ...SelectOptions) *discord.StringSelectMenuComponent {
-	route := "/select/" + id
+// the "settings" that the lookup to select menu would have
+type SelectMenuProperties struct {
+	//Select *discord.StringSelectMenuComponent <- i currently do not see a need for this field rn. possibly needed later and NOTE: use discord.SelectMenuComponent instead as the common "inheritance" of all types
+	Expiry     time.Time
+	Users      []string // strings of user ids because i literally can't do a slice contain with normal discord.Users
+	NextAction string
+}
 
+type SelectMenuLookup struct {
+	Keys map[string]SelectMenuProperties
+	sync.RWMutex
+}
+
+var selectLookup SelectMenuLookup
+
+func addSelectToLookup(id string, expiry time.Time, users []string) {
+	// use rw mutex lock to prevent concurrent map write panic (whoops)
+	selectLookup.RWMutex.Lock()
+	defer selectLookup.Unlock()
+	if selectLookup.Keys == nil {
+		selectLookup.Keys = make(map[string]SelectMenuProperties)
+	}
+	selectLookup.Keys[id] = SelectMenuProperties{Expiry: expiry, Users: users}
+}
+
+func replaceSelectInLookup(id string, properties *SelectMenuProperties) {
+	selectLookup.RWMutex.Lock()
+	defer selectLookup.Unlock()
+	selectLookup.Keys[id] = *properties
+}
+
+func getSelectFromLookup(id string) *SelectMenuProperties {
+	selectLookup.RWMutex.RLock()
+	defer selectLookup.RUnlock()
+	if selectLookup.Keys == nil {
+		selectLookup.Keys = make(map[string]SelectMenuProperties)
+	}
+	// yoink it
+	menu, ok := selectLookup.Keys[id]
+	if !ok {
+		return nil
+	}
+	return &menu
+}
+
+// this is to create a permanent select
+func CreateNewSelect(id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error, opts ...SelectOptions) (string, *discord.StringSelectMenuComponent) {
 	// parse ze options
 	// opts = param
 	// opt = singular option
@@ -301,65 +324,75 @@ func CreateNewSelect(id string, placeholder string, handlerFunc func(data discor
 
 	// build menu
 	menu := discord.NewStringSelectMenu(
-		route,
+		id,
 		placeholder,
 		options...,
 	)
 
-	slog.Info("registering string select menu under route "+route, slog.String("id", id))
-	RegisterSelect(route, handlerFunc)
+	slog.Info("registering string select menu under route "+id, slog.String("id", id))
+	RegisterSelect(id, handlerFunc)
 
-	return &menu
+	return id, &menu
 }
 
-// creates a select but with the proper expiry and id.
-func CreateRestrictedSelect(expireSeconds int64, userID snowflake.ID, id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error, opts ...SelectOptions) *discord.StringSelectMenuComponent {
-	route := HandlerRoute{}
-	route.SetBase(id)
-	route.AddRestrictor("expire", strconv.FormatInt(time.Now().Unix(), 10))
-	route.AddRestrictor("author", strconv.FormatUint(uint64(userID), 10))
-	return CreateNewSelect(route.GetRoute(), placeholder, handlerFunc, opts...)
+// create select menu but with other restrictions. also, BIG FUNCTION
+func CreateRestrictedSelect(
+	id *string,
+	expireSeconds int64,
+	users []string,
+	placeholder string,
+	handlerFunc func(data discord.SelectMenuInteractionData,
+		event *handler.ComponentEvent) error,
+	opts ...SelectOptions) *discord.StringSelectMenuComponent {
+	if id == nil {
+		u := shortuuid.New() // use this library instead of the default uuid, default too long and may overflow. this is 22 characters (?) so its good
+		u = "/select/" + u
+		id = &u
+	}
+	route, menu := CreateNewSelect(*id, placeholder, handlerFunc, opts...)
+	addSelectToLookup(route, time.Now().Add(time.Duration(expireSeconds)), users)
+	return menu
 }
 
 // TODO: split CreateRoleSelect (more options, universal) and CreateRestrictedRoleSelect
 // creates a special discord role select
-func CreateRoleSelect(expireSeconds int64, userID snowflake.ID, id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error) *discord.RoleSelectMenuComponent {
-	route := HandlerRoute{}
-	route.SetBase(id)
-	route.AddRestrictor("expire", strconv.FormatInt(time.Now().Unix(), 10))
-	route.AddRestrictor("author", strconv.FormatUint(uint64(userID), 10))
-
-	finalRoute := "/select/" + route.GetRoute()
+func CreateRoleSelect(id *string, expireSeconds int64, users []string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error) *discord.RoleSelectMenuComponent {
+	if id == nil {
+		u := shortuuid.New()
+		u = "/select/" + u
+		id = &u
+	}
 
 	// create a menu with only 1 option available. can later seperate this logic if required.
 	menu := discord.NewRoleSelectMenu(
-		finalRoute,
+		*id,
 		placeholder,
 	).WithMinValues(1).WithMaxValues(1)
 
-	slog.Info("registering new role select menu under route "+finalRoute, slog.String("id", id))
-	RegisterSelect(finalRoute, handlerFunc)
+	slog.Info("registering new role select menu under route "+*id, slog.String("id", *id))
+	RegisterSelect(*id, handlerFunc)
+	addSelectToLookup(*id, time.Now().Add(time.Duration(expireSeconds)), users)
 
 	return &menu
 }
 
 // creates a special discord channel select
-func CreateChannelSelect(expireSeconds int64, userID snowflake.ID, id string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error) *discord.ChannelSelectMenuComponent {
-	route := HandlerRoute{}
-	route.SetBase(id)
-	route.AddRestrictor("expire", strconv.FormatInt(time.Now().Unix(), 10))
-	route.AddRestrictor("author", strconv.FormatUint(uint64(userID), 10))
-
-	finalRoute := "/select/" + route.GetRoute()
+func CreateChannelSelect(id *string, expireSeconds int64, users []string, placeholder string, handlerFunc func(data discord.SelectMenuInteractionData, event *handler.ComponentEvent) error) *discord.ChannelSelectMenuComponent {
+	if id == nil {
+		u := shortuuid.New()
+		u = "/select/" + u
+		id = &u
+	}
 
 	// create a menu with only 1 option available. can later seperate this logic if required.
 	menu := discord.NewChannelSelectMenu(
-		finalRoute,
+		*id,
 		placeholder,
 	).WithMinValues(1).WithMaxValues(1).WithChannelTypes(discord.ChannelTypeGuildText)
 
-	slog.Info("registering new channel select menu under route "+finalRoute, slog.String("id", id))
-	RegisterSelect(finalRoute, handlerFunc)
+	slog.Info("registering new channel select menu under route "+*id, slog.String("id", *id))
+	RegisterSelect(*id, handlerFunc)
+	addSelectToLookup(*id, time.Now().Add(time.Duration(expireSeconds)), users)
 
 	return &menu
 }

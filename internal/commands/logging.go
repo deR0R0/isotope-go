@@ -8,6 +8,7 @@ import (
 	"log/slog"
 
 	"github.com/disgoorg/disgo/discord"
+	"github.com/disgoorg/snowflake/v2"
 )
 
 type ImportanceLevel int
@@ -19,9 +20,11 @@ const (
 	Danger
 )
 
-func SendLog(importance ImportanceLevel, guild discord.Guild, header string, message string) {
+func SendLog(importance ImportanceLevel, guild *snowflake.ID, header string, message string) {
+	// get guild
+	g, err := client.Rest.GetGuild(*guild, false)
 	// send the log message
-	channel, err := GetLogChannelFromGuild(&guild.ID)
+	channel, err := getSettingFromDB[discord.GuildTextChannel](&g.Guild, "log_channel")
 
 	if err != nil {
 		slog.Error("err while trying to send a log", slog.String("err", err.Error()))
@@ -29,7 +32,7 @@ func SendLog(importance ImportanceLevel, guild discord.Guild, header string, mes
 	}
 
 	if channel == nil {
-		slog.Info("channel nil")
+		slog.Info("attempted to send a log to guild, but channel was nil. ignoring.", slog.String("guild", guild.String()))
 		return
 	}
 
@@ -60,5 +63,7 @@ func SendLog(importance ImportanceLevel, guild discord.Guild, header string, mes
 
 	if err != nil {
 		slog.Error("err while sending a log message", slog.String("err", err.Error()))
+	} else {
+		slog.Info("sent a log message to a guild", slog.String("guild", guild.String()), slog.String("header", header), slog.String("message", message))
 	}
 }

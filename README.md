@@ -1,5 +1,7 @@
 # isotope-go
 
+<img width="425" height="214" alt="Screenshot 2026-11-14 at 5 10 17 PM" src="https://github.com/user-attachments/assets/3a22c944-17aa-41bc-8c0d-fcb7fc435ef7" />
+
 > [!IMPORTANT]
 > If you're a hackclub terra reviewer, the demo link is the video. Unless you go to TJ, you cannot access or run a version of the bot yourself.
 

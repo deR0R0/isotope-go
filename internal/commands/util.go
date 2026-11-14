@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
-	"strconv"
 	"sync"
 	"time"
 
@@ -227,7 +226,7 @@ func GetVerifyChannelFromGuild(guild *snowflake.ID) (*discord.Channel, error) {
 
 /* Router Component Helpers */
 
-func CreateNewButton(id string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) *discord.ButtonComponent {
+func CreateNewButton(id string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) (string, *discord.ButtonComponent) {
 	route := "/button/" + id
 
 	// don't use the NewPrimaryButton bs, just directly create the struct
@@ -239,15 +238,14 @@ func CreateNewButton(id string, label string, style discord.ButtonStyle, handler
 
 	slog.Info("registering button under route "+route, slog.String("id", id), slog.String("label", label))
 	RegisterButton(route, handlerFunc)
-	return &button
+	return route, &button
 }
 
-func CreateNewRestrictedButton(expireSeconds int64, userID snowflake.ID, id string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) *discord.ButtonComponent {
-	route := HandlerRoute{}
-	route.SetBase(id)
-	route.AddRestrictor("expire", strconv.FormatInt(time.Now().Unix(), 10))
-	route.AddRestrictor("author", strconv.FormatUint(uint64(userID), 10))
-	return CreateNewButton(route.GetRoute(), label, style, handlerFunc)
+func CreateNewRestrictedButton(expireSeconds int64, users []string, label string, style discord.ButtonStyle, handlerFunc func(data discord.ButtonInteractionData, event *handler.ComponentEvent) error) *discord.ButtonComponent {
+	u := shortuuid.New()
+	route, button := CreateNewButton(u, label, style, handlerFunc)
+	addComponentToLookup[ButtonProperties](route, time.Now().Add(time.Duration(expireSeconds)), users)
+	return button
 }
 
 /*

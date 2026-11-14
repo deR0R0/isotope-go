@@ -231,10 +231,12 @@ func sendVerifyButton(guild_id string) error {
 	mb.AddMediumHeader("Verification")
 	mb.AddMessage("This TJHSST server has verification enabled. Click the button to continue.")
 
+	_, button := CreateNewButton("isotope_authorize", "Verify", discord.ButtonStyleSuccess, LoginButtonHandler)
+
 	_, err = client.Rest.CreateMessage((*channel).ID(), discord.NewMessageCreate().
 		WithContent(mb.BuildMessage()).
 		AddActionRow(
-			CreateNewButton("isotope_authorize", "Verify", discord.ButtonStyleSuccess, LoginButtonHandler),
+			button,
 		),
 	)
 

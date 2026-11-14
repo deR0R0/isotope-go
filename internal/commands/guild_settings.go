@@ -410,6 +410,7 @@ func sendGuildSettingsMessage(rest rest.Rest, appID snowflake.ID, token string, 
 
 	// if the action row is empty, add the default settings select
 	if len(components) == 0 {
+		//CreateNewRestrictedButton()
 		messageUpdate = messageUpdate.AddActionRow(settings.Select)
 		//messageUpdate = messageUpdate.AddActionRow()
 	}

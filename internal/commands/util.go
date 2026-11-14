@@ -3,6 +3,7 @@ package commands
 import (
 	"fmt"
 	"log/slog"
+	"slices"
 	"strconv"
 	"sync"
 	"time"
@@ -260,6 +261,12 @@ type SelectOptions struct {
 	Emoji       *discord.ComponentEmoji
 }
 
+// settings for button
+type ButtonProperties struct {
+	Expiry time.Time
+	Users []string
+}
+
 // the "settings" that the lookup to select menu would have
 type SelectMenuProperties struct {
 	//Select *discord.StringSelectMenuComponent <- i currently do not see a need for this field rn. possibly needed later and NOTE: use discord.SelectMenuComponent instead as the common "inheritance" of all types
@@ -268,41 +275,103 @@ type SelectMenuProperties struct {
 	NextAction string
 }
 
-type SelectMenuLookup struct {
-	Keys map[string]SelectMenuProperties
+type ComponentProperties interface {
+	ButtonProperties | SelectMenuProperties
+}
+
+type ComponentLookup struct {
+	SelectMenuKeys map[string]SelectMenuProperties
+	ButtonKeys map[string]ButtonProperties
 	sync.RWMutex
 }
 
-var selectLookup SelectMenuLookup
+var componentLookup = ComponentLookup{
+	SelectMenuKeys: make(map[string]SelectMenuProperties),
+	ButtonKeys: make(map[string]ButtonProperties),
+}
 
-func addSelectToLookup(id string, expiry time.Time, users []string) {
+// runs every.. what? 2 minutes
+func CleanupExpiredComponents() {
+	slog.Info("cleaning up expired components..")
+	// lock it!
+	componentLookup.RWMutex.Lock()
+	defer componentLookup.RWMutex.Unlock()
+
+	// BYE BYE!
+	for id, property := range componentLookup.ButtonKeys {
+		if time.Now().After(property.Expiry) {
+			delete(componentLookup.ButtonKeys, id)
+		}
+	}
+
+	for id, property := range componentLookup.SelectMenuKeys {
+		if time.Now().After(property.Expiry) {
+			delete(componentLookup.SelectMenuKeys, id)
+		}
+	}
+}
+
+func addComponentToLookup[T ComponentProperties](id string, expiry time.Time, users []string) {
 	// use rw mutex lock to prevent concurrent map write panic (whoops)
-	selectLookup.RWMutex.Lock()
-	defer selectLookup.Unlock()
-	if selectLookup.Keys == nil {
-		selectLookup.Keys = make(map[string]SelectMenuProperties)
+	componentLookup.RWMutex.Lock()
+	defer componentLookup.Unlock()
+	var zero T
+	switch any(zero).(type) {
+	case SelectMenuProperties:
+		componentLookup.SelectMenuKeys[id] = SelectMenuProperties{Expiry: expiry, Users: slices.Clone(users)}
+	case ButtonProperties:
+		componentLookup.ButtonKeys[id] = ButtonProperties{Expiry: expiry, Users: slices.Clone(users)}
+	default:
+		slog.Warn("tried to add a component to the lookup but didn't handle the type propertly")
 	}
-	selectLookup.Keys[id] = SelectMenuProperties{Expiry: expiry, Users: users}
+	
 }
 
-func replaceSelectInLookup(id string, properties *SelectMenuProperties) {
-	selectLookup.RWMutex.Lock()
-	defer selectLookup.Unlock()
-	selectLookup.Keys[id] = *properties
+func replaceComponentPropertyInLookup[T ComponentProperties](id string, properties *T) {
+	componentLookup.RWMutex.Lock()
+	defer componentLookup.Unlock()
+	if properties != nil {
+		switch any(*properties).(type) {
+		case SelectMenuProperties:
+			componentLookup.SelectMenuKeys[id] = any(*properties).(SelectMenuProperties)
+		case ButtonProperties:
+			componentLookup.ButtonKeys[id] = any(*properties).(ButtonProperties)
+		default:
+			slog.Warn("tried to replace a component in the lookup but didn't handle the type properly")
+		}
+	}
 }
 
-func getSelectFromLookup(id string) *SelectMenuProperties {
-	selectLookup.RWMutex.RLock()
-	defer selectLookup.RUnlock()
-	if selectLookup.Keys == nil {
-		selectLookup.Keys = make(map[string]SelectMenuProperties)
-	}
+func getComponentFromLookup[T ComponentProperties](id string) *T {
+	componentLookup.RWMutex.RLock()
+	defer componentLookup.RUnlock()
 	// yoink it
-	menu, ok := selectLookup.Keys[id]
-	if !ok {
-		return nil
+	var zero T
+	switch any(zero).(type) {
+	case SelectMenuProperties:
+		menu, ok := componentLookup.SelectMenuKeys[id]
+		if !ok {
+			return nil
+		}
+		return any(&SelectMenuProperties{
+			Expiry: menu.Expiry,
+			Users: slices.Clone(menu.Users),
+			NextAction: menu.NextAction,
+		}).(*T)
+	case ButtonProperties:
+		button, ok := componentLookup.ButtonKeys[id]
+		if !ok {
+			return nil
+		}
+		return any(&ButtonProperties{
+			Expiry: button.Expiry,
+			Users: slices.Clone(button.Users),
+		}).(*T)
+	default:
+		slog.Warn("tried to get a component in the lookup but didn't handle the type properly")	
 	}
-	return &menu
+
+	return nil
 }
 
 // this is to create a permanent select
@@ -350,7 +419,7 @@ func CreateRestrictedSelect(
 		id = &u
 	}
 	route, menu := CreateNewSelect(*id, placeholder, handlerFunc, opts...)
-	addSelectToLookup(route, time.Now().Add(time.Duration(expireSeconds)), users)
+	addComponentToLookup[SelectMenuProperties](route, time.Now().Add(time.Duration(expireSeconds)), users)
 	return menu
 }
 
@@ -371,7 +440,7 @@ func CreateRoleSelect(id *string, expireSeconds int64, users []string, placehold
 
 	slog.Info("registering new role select menu under route "+*id, slog.String("id", *id))
 	RegisterSelect(*id, handlerFunc)
-	addSelectToLookup(*id, time.Now().Add(time.Duration(expireSeconds)), users)
+	addComponentToLookup[SelectMenuProperties](*id, time.Now().Add(time.Duration(expireSeconds)), users)
 
 	return &menu
 }
@@ -392,7 +461,7 @@ func CreateChannelSelect(id *string, expireSeconds int64, users []string, placeh
 
 	slog.Info("registering new channel select menu under route "+*id, slog.String("id", *id))
 	RegisterSelect(*id, handlerFunc)
-	addSelectToLookup(*id, time.Now().Add(time.Duration(expireSeconds)), users)
+	addComponentToLookup[SelectMenuProperties](*id, time.Now().Add(time.Duration(expireSeconds)), users)
 
 	return &menu
 }

@@ -80,7 +80,7 @@ func handleGuildSettingsSelect(data discord.SelectMenuInteractionData, event *ha
 
 	// check expiry and author and permissions
 	selectRoute := data.CustomID()
-	properties := getSelectFromLookup(selectRoute)
+	properties := getComponentFromLookup[SelectMenuProperties](selectRoute)
 	if properties == nil {
 		event.UpdateInteractionResponse(discord.NewMessageUpdate().WithContent("Sorry, this interaction is expired.").WithComponents())
 		return nil
@@ -131,7 +131,7 @@ func handleGuildSettingsSelect(data discord.SelectMenuInteractionData, event *ha
 		case "LogChannel":
 			menu := CreateChannelSelect(&selectRoute, 120, []string{event.User().String()}, "Choose a Channel...", handleGuildSettingsSelect)
 			properties.NextAction = "LogChannel"
-			replaceSelectInLookup(selectRoute, properties)
+			replaceComponentPropertyInLookup(selectRoute, properties)
 			sendGuildSettingsMessage(event.Client().Rest, event.ApplicationID(), event.Token(), &guild.Guild, &event.Member().User, menu)
 		case "EnableVerifySystem", "DisableVerifySystem":
 			values := make(map[string]bool)
@@ -142,17 +142,17 @@ func handleGuildSettingsSelect(data discord.SelectMenuInteractionData, event *ha
 			}
 			db.Update(db.GetDB(), "guilds", values)
 			slog.Info("guild's verify system was toggled", slog.String("guild", guild.ID.String()), slog.String("user", event.User().ID.String()), slog.Bool("value", values["verify_enabled"]))
-			SendLog(Important, &guild.ID, "Verify System Togged", event.User().Mention()+" changed the guild's verify system to "+strconv.FormatBool(values["verify_enabled"]))
+			SendLog(Important, &guild.ID, "Verify System Toggled", event.User().Mention()+" changed the guild's verify system to "+strconv.FormatBool(values["verify_enabled"]))
 			sendGuildSettingsMessage(event.Client().Rest, event.ApplicationID(), event.Token(), &guild.Guild, &event.Member().User)
 		case "VerifyRole":
 			menu := CreateRoleSelect(&selectRoute, 120, []string{event.User().String()}, "Choose a Role...", handleGuildSettingsSelect)
 			properties.NextAction = "VerifyRole"
-			replaceSelectInLookup(selectRoute, properties)
+			replaceComponentPropertyInLookup(selectRoute, properties)
 			sendGuildSettingsMessage(event.Client().Rest, event.ApplicationID(), event.Token(), &guild.Guild, &event.Member().User, menu)
 		case "VerifyChannel":
 			menu := CreateChannelSelect(&selectRoute, 120, []string{event.User().String()}, "Choose a Channel...", handleGuildSettingsSelect)
 			properties.NextAction = "VerifyChannel"
-			replaceSelectInLookup(selectRoute, properties)
+			replaceComponentPropertyInLookup(selectRoute, properties)
 			sendGuildSettingsMessage(event.Client().Rest, event.ApplicationID(), event.Token(), &guild.Guild, &event.Member().User, menu)
 		}
 	} else if selectedRole != nil {
@@ -411,6 +411,7 @@ func sendGuildSettingsMessage(rest rest.Rest, appID snowflake.ID, token string, 
 	// if the action row is empty, add the default settings select
 	if len(components) == 0 {
 		messageUpdate = messageUpdate.AddActionRow(settings.Select)
+		//messageUpdate = messageUpdate.AddActionRow()
 	}
 
 	_, err = rest.UpdateInteractionResponse(
